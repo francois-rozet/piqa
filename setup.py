@@ -20,5 +20,10 @@ setuptools.setup(
     author_email='francois.rozet@outlook.com',
     url='https://github.com/francois-rozet/spiq',
     install_requires=required,
-    packages=setuptools.find_packages()
+    packages=setuptools.find_packages(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ]
 )
