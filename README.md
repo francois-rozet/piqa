@@ -24,4 +24,12 @@ cp -R spiq <path/to/project>/spiq
 
 ## Getting started
 
-TODO
+```python
+import torch
+import spiq
+
+x = torch.rand(3, 3, 256, 256)
+y = torch.rand(3, 3, 256, 256)
+
+l = spiq.psnr(x, y)
+```
