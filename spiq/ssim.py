@@ -99,18 +99,17 @@ def ssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, val
     """
 
     n_channels, _, window_size, _ = window.size()
-    padding = window_size // 2
 
-    mu_x = F.conv2d(x, window, padding=padding, groups=n_channels)
-    mu_y = F.conv2d(y, window, padding=padding, groups=n_channels)
+    mu_x = F.conv2d(x, window, padding=0, groups=n_channels)
+    mu_y = F.conv2d(y, window, padding=0, groups=n_channels)
 
     mu_x_sq = mu_x ** 2
     mu_y_sq = mu_y ** 2
     mu_xy = mu_x * mu_y
 
-    sigma_x_sq = F.conv2d(x ** 2, window, padding=padding, groups=n_channels) - mu_x_sq
-    sigma_y_sq = F.conv2d(y ** 2, window, padding=padding, groups=n_channels) - mu_y_sq
-    sigma_xy = F.conv2d(x * y, window, padding=padding, groups=n_channels) - mu_xy
+    sigma_x_sq = F.conv2d(x ** 2, window, padding=0, groups=n_channels) - mu_x_sq
+    sigma_y_sq = F.conv2d(y ** 2, window, padding=0, groups=n_channels) - mu_y_sq
+    sigma_xy = F.conv2d(x * y, window, padding=0, groups=n_channels) - mu_xy
 
     c1 = (_K1 * value_range) ** 2
     c2 = (_K2 * value_range) ** 2
