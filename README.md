@@ -31,5 +31,6 @@ import spiq
 x = torch.rand(3, 3, 256, 256)
 y = torch.rand(3, 3, 256, 256)
 
-l = spiq.psnr(x, y)
+a = spiq.psnr(x, y)
+b = spiq.ssim(x, y)
 ```
