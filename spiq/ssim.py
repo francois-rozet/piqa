@@ -6,8 +6,7 @@ Wikipedia:
     https://en.wikipedia.org/wiki/Structural_similarity
 
 Credits:
-    Inspired by pytorch-msssim
-    https://github.com/VainF/pytorch-msssim
+    Inspired by [pytorch-msssim](https://github.com/VainF/pytorch-msssim)
 
 References:
     [1] Multiscale structural similarity for image quality assessment
@@ -27,6 +26,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from spiq.utils import gaussian_kernel
+
 
 #############
 # Constants #
@@ -41,39 +42,8 @@ _WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
 # Functions #
 #############
 
-def gaussian_kernel(kernel_size: int, sigma: float=1., n: int=2) -> torch.Tensor:
-    r"""Returns the `n`-dimensional Gaussian kernel of size `kernel_size`.
-
-    The distribution is centered around the kernel's center and the standard deviation is `sigma`.
-
-    Args:
-        kernel_size: size of the kernel
-        sigma: standard deviation of the distribution
-        n: number of dimensions of the kernel
-
-    Wikipedia:
-        https://en.wikipedia.org/wiki/Normal_distribution
-    """
-
-    distrib = torch.arange(kernel_size).float()
-    distrib -= (kernel_size - 1) / 2
-    distrib = distrib ** 2
-
-    kernel = distrib.clone()
-
-    for i in range(1, n):
-        distrib = distrib.unsqueeze(0)
-        kernel = kernel.unsqueeze(i)
-        kernel = kernel + distrib
-
-    kernel = torch.exp(-kernel / (2 * sigma ** 2))
-    kernel /= kernel.sum()
-
-    return kernel
-
-
 def create_window(window_size: int, n_channels: int) -> torch.Tensor:
-    r"""Returns the SSIM convolution window of size `window_size`.
+    r"""Returns the SSIM convolution window (kernel) of size `window_size`.
 
     Args:
         window_size: size of the window
@@ -88,7 +58,7 @@ def create_window(window_size: int, n_channels: int) -> torch.Tensor:
     return window
 
 
-def ssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, value_range: float=1.) -> torch.Tensor:
+def ssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, value_range: float = 1.) -> torch.Tensor:
     r"""Returns the SSIM and the contrast sensitivity (CS) per channel between `x` and `y`.
 
     Args:
@@ -120,12 +90,12 @@ def ssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, val
     return ssim_map.mean((-1, -2)), cs_map.mean((-1, -2))
 
 
-def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int=11, value_range: float=1.) -> torch.Tensor:
+def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int = 11, value_range: float = 1.) -> torch.Tensor:
     r"""Returns the SSIM between `x` and `y`.
 
     Args:
-        x: input tensor of shape, (N, C, H, W)
-        y: target tensor of shape, (N, C, H, W)
+        x: input tensor, (N, C, H, W)
+        y: target tensor, (N, C, H, W)
         window_size: size of the window
         value_range: value range of the inputs (usually 1. or 255)
     """
@@ -136,7 +106,7 @@ def ssim(x: torch.Tensor, y: torch.Tensor, window_size: int=11, value_range: flo
     return ssim_per_channel(x, y, window, value_range)[0].mean(-1)
 
 
-def msssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, value_range: float=1., weights: torch.Tensor=_WEIGHTS) -> torch.Tensor:
+def msssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, value_range: float = 1., weights: torch.Tensor = _WEIGHTS) -> torch.Tensor:
     """Returns the MS-SSIM per channel between `x` and `y`.
 
     Args:
@@ -144,7 +114,7 @@ def msssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, v
         y: target tensor, (N, C, H, W)
         window: convolution window
         value_range: value range of the inputs (usually 1. or 255)
-        weights: weights of the scales, (N)
+        weights: weights of the scales, (M,)
     """
 
     mcs = []
@@ -164,15 +134,15 @@ def msssim_per_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor, v
     return msssim.prod(dim=0)
 
 
-def msssim(x: torch.Tensor, y: torch.Tensor, window_size: int=11, value_range: float=1., weights: torch.Tensor=_WEIGHTS) -> torch.Tensor:
+def msssim(x: torch.Tensor, y: torch.Tensor, window_size: int = 11, value_range: float = 1., weights: torch.Tensor = _WEIGHTS) -> torch.Tensor:
     r"""Returns the MS-SSIM between `x` and `y`.
 
     Args:
-        x: input tensor of shape, (N, C, H, W)
-        y: target tensor of shape, (N, C, H, W)
+        x: input tensor, (N, C, H, W)
+        y: target tensor, (N, C, H, W)
         window_size: size of the window
         value_range: value range of the inputs (usually 1. or 255)
-        weights: weights of the scales, (N)
+        weights: weights of the scales, (M,)
     """
 
     n_channels = x.size(1)
@@ -188,9 +158,18 @@ def msssim(x: torch.Tensor, y: torch.Tensor, window_size: int=11, value_range: f
 
 class SSIM(nn.Module):
     r"""Creates a criterion that measures the SSIM between an input and a target.
+
+    Args:
+        window_size: size of the window
+        n_channels: number of channels
+        value_range: value range of the inputs (usually 1. or 255)
+        reduction: reduction type (`'mean'`, `'sum'` or `'none'`)
+
+    Call:
+        The input and target tensors should be of shape (N, C, H, W).
     """
 
-    def __init__(self, window_size: int=11, n_channels: int=3, value_range: float=1., reduction='mean'):
+    def __init__(self, window_size: int = 11, n_channels: int = 3, value_range: float = 1., reduction: str = 'mean'):
         super().__init__()
 
         self.register_buffer(
@@ -202,12 +181,6 @@ class SSIM(nn.Module):
         self.reduction = reduction
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            input: input tensor, (N, C, H, W)
-            target: target tensor, (N, C, H, W)
-        """
-
         l = ssim_per_channel(
             input, target,
             window=self.window,
@@ -215,34 +188,33 @@ class SSIM(nn.Module):
         )[0].mean(-1)
 
         if self.reduction == 'mean':
-            return l.mean()
+            l = l.mean()
         elif self.reduction == 'sum':
-            return l.sum()
+            l = l.sum()
 
         return l
 
 
 class MSSSIM(SSIM):
     r"""Creates a criterion that measures the MS-SSIM between an input and a target.
+
+    Args:
+        window_size: size of the window
+        n_channels: number of channels
+        value_range: value range of the inputs (usually 1. or 255)
+        weights: weights of the scales, (M,)
+        reduction: reduction type (`'mean'`, `'sum'` or `'none'`)
+
+    Call:
+        The input and target tensors should be of shape (N, C, H, W).
     """
 
-    def __init__(self, window_size: int=11, n_channels: int=3, value_range: float=1., weights: torch.Tensor=_WEIGHTS, reduction='mean'):
-        super().__init__(
-            window_size=window_size,
-            n_channels=n_channels,
-            value_range=value_range,
-            reduction=reduction
-        )
+    def __init__(self, window_size: int = 11, n_channels: int = 3, value_range: float = 1., weights: torch.Tensor = _WEIGHTS, reduction: str = 'mean'):
+        super().__init__(window_size, n_channels, value_range, reduction)
 
         self.register_buffer('weights', weights)
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            input: input tensor, (N, C, H, W)
-            target: target tensor, (N, C, H, W)
-        """
-
         l = msssim_per_channel(
             input, target,
             window=self.window,
@@ -251,8 +223,8 @@ class MSSSIM(SSIM):
         ).mean(-1)
 
         if self.reduction == 'mean':
-            return l.mean()
+            l = l.mean()
         elif self.reduction == 'sum':
-            return l.sum()
+            l = l.sum()
 
         return l

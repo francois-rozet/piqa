@@ -3,8 +3,7 @@ r"""Learned Perceptual Image Patch Similarity (LPIPS)
 This module implements the LPIPS in PyTorch.
 
 Credits:
-    Inspired by lpips-pytorch
-    https://github.com/S-aiueo32/lpips-pytorch
+    Inspired by [lpips-pytorch](https://github.com/S-aiueo32/lpips-pytorch)
 
 References:
     [1] The Unreasonable Effectiveness of Deep Features as a Perceptual Metric
@@ -20,89 +19,44 @@ import inspect
 import os
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
 import torchvision.models as models
+
+from spiq.utils import normalize_tensor, Intermediary
 
 
 #############
 # Constants #
 #############
 
-_SHIFT = torch.Tensor([-.030, -.088, -.188])
-_SCALE = torch.Tensor([.458, .448, .450])
-
-
-#############
-# Functions #
-#############
-
-def normalize(x: torch.Tensor, dim=(), norm='L2', epsilon: float=1e-8) -> torch.Tensor:
-    r"""Returns `x` normalized.
-
-    Args:
-        x: input tensor
-        dim: dimension(s) to normalize
-        norm: norm function name ('L1' or 'L2')
-        epsilon: numerical stability
-
-    Wikipedia:
-        https://en.wikipedia.org/wiki/Norm_(mathematics)
-    """
-
-    if norm == 'L1':
-        norm = x.abs().sum(dim=dim, keepdim=True)
-    else: # norm == 'L2'
-        norm = torch.sqrt((x ** 2).sum(dim=dim, keepdim=True))
-
-    return x / (norm + epsilon)
+_SHIFT = torch.Tensor([0.485, 0.456, 0.406])
+_SCALE = torch.Tensor([0.229, 0.224, 0.225])
 
 
 ###########
 # Classes #
 ###########
 
-class Intermediate(nn.Module):
-    r"""Module that returns the outputs of target indermediate layers of a sequential module during its forward pass.
-
-    Args:
-        layers: sequential module
-        targets: target layer indexes
-    """
-
-    def __init__(self, layers: nn.Sequential, targets: list):
-        super().__init__()
-
-        self.layers = layers
-        self.targets = set(targets)
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            input: input tensor
-        """
-
-        output = []
-
-        for i, layer in enumerate(self.layers):
-            input = layer(input)
-
-            if i in self.targets:
-                output.append(input.clone())
-
-            if len(output) == len(self.targets):
-                break
-
-        return output
-
-
 class LPIPS(nn.Module):
     r"""Creates a criterion that measures the LPIPS between an input and a target.
+
+    Args:
+        network: perception network name (`'AlexNet'`, `'SqueezeNet'` or `'VGG16'`)
+        scaling: whether the input and target are sclaed w.r.t. ImageNet
+        reduction: reduction type (`'mean'`, `'sum'` or `'none'`)
+
+    Call:
+        The input and target tensors should be of shape (N, C, H, W).
     """
 
-    def __init__(self, network='AlexNet', normalize=False, reduction='mean'):
+    def __init__(self, network: str = 'AlexNet', scaling: bool = False, reduction: str = 'mean'):
         super().__init__()
 
+        # ImageNet scaling
+        self.scaling = scaling
+        self.register_buffer('shift', _SHIFT.view(1, -1, 1, 1))
+        self.register_buffer('scale', _SCALE.view(1, -1, 1, 1))
+
+        # Perception layers
         if network == 'AlexNet':
             layers = models.alexnet(pretrained=True).features
             targets = [1, 4, 7, 9, 11]
@@ -118,8 +72,9 @@ class LPIPS(nn.Module):
         else:
             raise ValueError('Unknown network architecture ' + network)
 
-        self.net = Intermediate(layers, targets)
+        self.net = Intermediary(layers, targets)
 
+        # Linear comparators
         state_path = os.path.join(
             os.path.dirname(inspect.getsourcefile(self.__init__)),
             f'weights/lpips_{network}.pth'
@@ -131,43 +86,31 @@ class LPIPS(nn.Module):
         ])
         self.lin.load_state_dict(torch.load(state_path))
 
-        self.register_buffer('shift', _SHIFT.view(1, -1, 1, 1))
-        self.register_buffer('scale', _SCALE.view(1, -1, 1, 1))
-
+        # Prevent gradients
         for x in [self.parameters(), self.buffers()]:
             for y in x:
                 y.requires_grad = False
 
-        self.normalize = normalize
         self.reduction = reduction
 
     def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            input: input tensor, (N, C, H, W)
-            target: target tensor, (N, C, H, W)
-        """
-
-        if self.normalize:
-            input = input * 2 - 1
-            target = target * 2 - 1
-
-        input_features = self.net((input - self.shift) / self.scale)
-        target_features = self.net((target - self.shift) / self.scale)
+        if self.scaling:
+            input = (input - self.shift) / self.scale
+            target = (target - self.shift) / self.scale
 
         residuals = []
 
-        for loss, (fx, fy) in zip(self.lin, zip(input_features, target_features)):
-            fx = normalize(fx, dim=1, norm='L2')
-            fy = normalize(fy, dim=1, norm='L2')
+        for loss, (fx, fy) in zip(self.lin, zip(self.net(input), self.net(target))):
+            fx = normalize_tensor(fx, dim=1, norm='L2')
+            fy = normalize_tensor(fy, dim=1, norm='L2')
 
             residuals.append(loss((fx - fy) ** 2).mean(dim=(-1, -2)))
 
         l = torch.cat(residuals, dim=-1).sum(dim=-1)
 
         if self.reduction == 'mean':
-            return l.mean()
+            l = l.mean()
         elif self.reduction == 'sum':
-            return l.sum()
+            l = l.sum()
 
         return l

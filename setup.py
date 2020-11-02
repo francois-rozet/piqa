@@ -11,8 +11,8 @@ with open('requirements.txt', 'r') as f:
 
 setuptools.setup(
     name='spiq',
-    version='0.0.1',
-    description='Image quality metrics in PyTorch.',
+    version='0.0.2',
+    description='Image quality metrics in PyTorch',
     long_description=readme,
     long_description_content_type='text/markdown',
     keywords='pytorch image processing metrics',

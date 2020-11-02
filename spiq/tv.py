@@ -18,12 +18,12 @@ import torch.nn as nn
 # Functions #
 #############
 
-def tv(x: torch.Tensor, norm='L1') -> torch.Tensor:
+def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
     r"""Returns the TV of `x`.
 
     Args:
         x: input tensor, (..., C, H, W)
-        norm: norm to use ('L1', 'L2' or 'L2_squared')
+        norm: norm function name (`'L1'`, `'L2'` or `'L2_squared'`)
     """
 
     w_var = x[..., :, 1:] - x[..., :, :-1]
@@ -50,25 +50,27 @@ def tv(x: torch.Tensor, norm='L1') -> torch.Tensor:
 
 class TV(nn.Module):
     r"""Creates a criterion that measures the TV of an input.
+
+    Args:
+        norm: norm function name (`'L1'`, `'L2'` or `'L2_squared'`)
+        reduction: reduction type (`'mean'`, `'sum'` or `'none'`)
+
+    Call:
+        The input tensor should be of shape (N, C, H, W).
     """
 
-    def __init__(self, norm='L1', reduction='mean'):
+    def __init__(self, norm: str = 'L2', reduction: str = 'mean'):
         super().__init__()
 
         self.norm = norm
         self.reduction = reduction
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            input: input tensor, (N, C, H, W)
-        """
-
         l = tv(input, norm=self.norm)
 
         if self.reduction == 'mean':
-            return l.mean()
+            l = l.mean()
         elif self.reduction == 'sum':
-            return l.sum()
+            l = l.sum()
 
         return l

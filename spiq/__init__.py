@@ -1,6 +1,6 @@
-__version__ = '0.0.1'
+r"""Simple PyTorch Image Quality
 
-from .psnr import psnr, PSNR
-from .ssim import ssim, msssim, SSIM, MSSSIM
-from .tv import tv, TV
-from .lpips import LPIPS
+The spiq package is divided in several submodules, each of which implements the functions and/or classes related to a specific image quality metric.
+"""
+
+__version__ = '0.0.2'
