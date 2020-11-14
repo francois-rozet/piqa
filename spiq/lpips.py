@@ -11,10 +11,6 @@ References:
     https://arxiv.org/abs/1801.03924
 """
 
-###########
-# Imports #
-###########
-
 import inspect
 import os
 import torch
@@ -23,32 +19,30 @@ import torchvision.models as models
 
 from spiq.utils import normalize_tensor, Intermediary
 
-
-#############
-# Constants #
-#############
-
 _SHIFT = torch.Tensor([0.485, 0.456, 0.406])
 _SCALE = torch.Tensor([0.229, 0.224, 0.225])
 
 
-###########
-# Classes #
-###########
-
 class LPIPS(nn.Module):
-    r"""Creates a criterion that measures the LPIPS between an input and a target.
+    r"""Creates a criterion that measures the LPIPS
+    between an input and a target.
 
     Args:
-        network: perception network name (`'AlexNet'`, `'SqueezeNet'` or `'VGG16'`)
-        scaling: whether the input and target are sclaed w.r.t. ImageNet
-        reduction: reduction type (`'mean'`, `'sum'` or `'none'`)
+        network: A perception network name (`'AlexNet'`,
+            `'SqueezeNet'` or `'VGG16'`).
+        scaling: Whether the input and target are scaled w.r.t. ImageNet.
+        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
 
     Call:
         The input and target tensors should be of shape (N, C, H, W).
     """
 
-    def __init__(self, network: str = 'AlexNet', scaling: bool = False, reduction: str = 'mean'):
+    def __init__(
+        self,
+        network: str = 'AlexNet',
+        scaling: bool = False,
+        reduction: str = 'mean',
+    ):
         super().__init__()
 
         # ImageNet scaling
@@ -93,14 +87,18 @@ class LPIPS(nn.Module):
 
         self.reduction = reduction
 
-    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+    ) -> torch.Tensor:
         if self.scaling:
             input = (input - self.shift) / self.scale
             target = (target - self.shift) / self.scale
 
         residuals = []
 
-        for loss, (fx, fy) in zip(self.lin, zip(self.net(input), self.net(target))):
+        for loss, fx, fy in zip(self.lin, self.net(input), self.net(target)):
             fx = normalize_tensor(fx, dim=1, norm='L2')
             fy = normalize_tensor(fy, dim=1, norm='L2')
 

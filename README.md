@@ -47,3 +47,5 @@ The [documentation](https://francois-rozet.github.io/spiq/) of this package is g
 ```bash
 pdoc spiq --html --config "git_link_template='https://github.com/francois-rozet/spiq/blob/{commit}/{path}#L{start_line}-L{end_line}'"
 ```
+
+> The code follows the [Google Python style](https://google.github.io/styleguide/pyguide.html) and is compliant with [YAPF](https://github.com/google/yapf).

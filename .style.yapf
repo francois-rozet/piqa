@@ -1,0 +1,10 @@
+[style]
+based_on_style = google
+
+spaces_around_power_operator = true
+
+dedent_closing_brackets = true
+coalesce_brackets = true
+split_arguments_when_comma_terminated = true
+split_all_top_level_comma_separated_values = true
+split_complex_comprehension = true
