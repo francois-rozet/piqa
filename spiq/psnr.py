@@ -9,6 +9,8 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
+from spiq.utils import build_reduce
+
 from typing import Tuple
 
 
@@ -51,7 +53,7 @@ class PSNR(nn.Module):
         super().__init__()
 
         self.value_range = value_range
-        self.reduction = reduction
+        self.reduce = build_reduce(reduction)
 
     def forward(
         self,
@@ -65,9 +67,4 @@ class PSNR(nn.Module):
             value_range=self.value_range,
         )
 
-        if self.reduction == 'mean':
-            l = l.mean()
-        elif self.reduction == 'sum':
-            l = l.sum()
-
-        return l
+        return self.reduce(l)

@@ -9,6 +9,8 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
+from spiq.utils import build_reduce
+
 
 def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
     r"""Returns the TV of `x`.
@@ -51,14 +53,9 @@ class TV(nn.Module):
         super().__init__()
 
         self.norm = norm
-        self.reduction = reduction
+        self.reduce = build_reduce(reduction)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         l = tv(input, norm=self.norm)
 
-        if self.reduction == 'mean':
-            l = l.mean()
-        elif self.reduction == 'sum':
-            l = l.sum()
-
-        return l
+        return self.reduce(l)

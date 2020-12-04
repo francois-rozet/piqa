@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from spiq.utils import gaussian_kernel
+from spiq.utils import build_reduce, gaussian_kernel
 
 _SIGMA = 1.5
 _K1, _K2 = 0.01, 0.03
@@ -191,7 +191,7 @@ class SSIM(nn.Module):
         self.register_buffer('window', create_window(window_size, n_channels))
 
         self.value_range = value_range
-        self.reduction = reduction
+        self.reduce = build_reduce(reduction)
 
     def forward(
         self,
@@ -205,12 +205,7 @@ class SSIM(nn.Module):
             value_range=self.value_range,
         )[0].mean(-1)
 
-        if self.reduction == 'mean':
-            l = l.mean()
-        elif self.reduction == 'sum':
-            l = l.sum()
-
-        return l
+        return self.reduce(l)
 
 
 class MSSSIM(SSIM):
@@ -244,9 +239,4 @@ class MSSSIM(SSIM):
             weights=self.weights,
         ).mean(-1)
 
-        if self.reduction == 'mean':
-            l = l.mean()
-        elif self.reduction == 'sum':
-            l = l.sum()
-
-        return l
+        return self.reduce(l)

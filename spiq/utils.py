@@ -4,7 +4,28 @@ r"""Miscellaneous tools such as modules, functionals and more.
 import torch
 import torch.nn as nn
 
-from typing import List, Tuple
+from typing import Callable, List, Tuple
+
+
+def build_reduce(
+    reduction: str = 'mean',
+    dim: Tuple[int, ...] = (),
+    keepdim: bool = False,
+) -> Callable[[torch.Tensor], torch.Tensor]:
+    r"""Returns a reduce function.
+
+    Args:
+        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        dim: The dimension(s) along which to reduce.
+        keepdim: Whether the output tensor has `dim` retained or not.
+    """
+
+    if reduction == 'mean':
+        return lambda x: x.mean(dim=dim, keepdim=keepdim)
+    elif reduction == 'sum':
+        return lambda x: x.sum(dim=dim, keepdim=keepdim)
+
+    return lambda x: x
 
 
 def gaussian_kernel(

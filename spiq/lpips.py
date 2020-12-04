@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-from spiq.utils import normalize_tensor, Intermediary
+from spiq.utils import build_reduce, normalize_tensor, Intermediary
 
 _SHIFT = torch.Tensor([0.485, 0.456, 0.406])
 _SCALE = torch.Tensor([0.229, 0.224, 0.225])
@@ -85,7 +85,7 @@ class LPIPS(nn.Module):
             for y in x:
                 y.requires_grad = False
 
-        self.reduction = reduction
+        self.reduce = build_reduce(reduction)
 
     def forward(
         self,
@@ -106,9 +106,4 @@ class LPIPS(nn.Module):
 
         l = torch.cat(residuals, dim=-1).sum(dim=-1)
 
-        if self.reduction == 'mean':
-            l = l.mean()
-        elif self.reduction == 'sum':
-            l = l.sum()
-
-        return l
+        return self.reduce(l)
