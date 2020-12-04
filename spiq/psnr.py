@@ -42,18 +42,23 @@ class PSNR(nn.Module):
     between an input and a target.
 
     Args:
-        value_range: The value range of the inputs (usually 1. or 255).
         reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+
+        `**kwargs` are transmitted to `psnr`, with
+        the exception of `dim` and `keepdim`.
 
     Call:
         The input and target tensors should be of shape (N, ...).
     """
 
-    def __init__(self, value_range: float = 1., reduction: str = 'mean'):
+    def __init__(self, reduction: str = 'mean', **kwargs):
         super().__init__()
 
-        self.value_range = value_range
         self.reduce = build_reduce(reduction)
+        self.kwargs = {
+            k: v for k, v in kwargs.items()
+            if k not in ['dim', 'keepdim']
+        }
 
     def forward(
         self,
@@ -64,7 +69,7 @@ class PSNR(nn.Module):
             input,
             target,
             dim=tuple(range(1, input.ndimension())),
-            value_range=self.value_range,
+            **self.kwargs,
         )
 
         return self.reduce(l)

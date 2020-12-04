@@ -97,20 +97,19 @@ def tensor_norm(
 
 def normalize_tensor(
     x: torch.Tensor,
-    dim: Tuple[int, ...] = (),
-    norm: str = 'L2',
     epsilon: float = 1e-8,
+    **kwargs,
 ) -> torch.Tensor:
     r"""Returns `x` normalized.
 
     Args:
         x: An input tensor.
-        dim: The dimension(s) along which to normalize.
-        norm: A norm function name (`'L1'`, `'L2'` or `'L2_squared'`).
         epsilon: A numerical stability term.
+
+        `**kwargs` are transmitted to `tensor_norm`.
     """
 
-    norm = tensor_norm(x, dim=dim, keepdim=True, norm=norm)
+    norm = tensor_norm(x, **kwargs)
 
     return x / (norm + epsilon)
 
