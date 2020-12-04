@@ -42,6 +42,7 @@ class LPIPS(nn.Module):
         network: str = 'AlexNet',
         scaling: bool = False,
         reduction: str = 'mean',
+        trainable: bool = False,
     ):
         super().__init__()
 
@@ -80,10 +81,10 @@ class LPIPS(nn.Module):
         ])
         self.lin.load_state_dict(torch.load(state_path))
 
-        # Prevent gradients
-        for x in [self.parameters(), self.buffers()]:
-            for y in x:
-                y.requires_grad = False
+        if not trainable:
+            # Prevent gradients
+            for p in self.parameters():
+                p.requires_grad = False
 
         self.reduce = build_reduce(reduction)
 
