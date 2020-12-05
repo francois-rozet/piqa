@@ -3,6 +3,7 @@ r"""Miscellaneous tools such as modules, functionals and more.
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from typing import Callable, List, Tuple
 
@@ -62,6 +63,59 @@ def gaussian_kernel(
     kernel /= kernel.sum()
 
     return kernel
+
+
+def gradient2d(x: torch.Tensor, kernel: torch.Tensor) -> torch.Tensor:
+    r"""Returns the 2D gradient of `x` with respect to `kernel`.
+
+    Args:
+        x: An input tensor, (N, 1, H, W).
+        kernel: A 2D derivative kernel, (2, K, K).
+    """
+
+    return F.conv2d(x, kernel, padding=kernel.size(-1) // 2)
+
+
+def prewitt_kernel() -> torch.Tensor:
+    r"""Returns the (horizontal) 3x3 Prewitt kernel.
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Prewitt_operator
+    """
+
+    return torch.Tensor([
+        [1., 0., -1.],
+        [1., 0., -1.],
+        [1., 0., -1.],
+    ]) / 3
+
+
+def sobel_kernel() -> torch.Tensor:
+    r"""Returns the (horizontal) 3x3 Sobel kernel.
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Sobel_operator
+    """
+
+    return torch.Tensor([
+        [1., 0., -1.],
+        [2., 0., -2.],
+        [1., 0., -1.],
+    ]) / 4
+
+
+def scharr_kernel() -> torch.Tensor:
+    r"""Returns the (horizontal) 3x3 Scharr kernel.
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Scharr_operator
+    """
+
+    return torch.Tensor([
+        [3., 0., -3.],
+        [10., 0., -10.],
+        [3., 0., -3.],
+    ]) / 16
 
 
 def tensor_norm(
