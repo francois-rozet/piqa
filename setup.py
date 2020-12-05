@@ -10,15 +10,15 @@ with open('requirements.txt', 'r') as f:
     required = f.read().splitlines()
 
 setuptools.setup(
-    name='spiq',
-    version='0.0.2',
-    description='Image quality metrics in PyTorch',
+    name='piqa',
+    version='1.0.0',
+    description='PyTorch Image Quality Assessment',
     long_description=readme,
     long_description_content_type='text/markdown',
     keywords='pytorch image processing metrics',
     author='François Rozet',
     author_email='francois.rozet@outlook.com',
-    url='https://github.com/francois-rozet/spiq',
+    url='https://github.com/francois-rozet/piqa',
     install_requires=required,
     packages=setuptools.find_packages(),
     classifiers=[

@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from spiq.utils import build_reduce, gaussian_kernel
+from piqa.utils import build_reduce, gaussian_kernel
 
 from typing import Tuple
 

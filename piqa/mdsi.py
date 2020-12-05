@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from spiq.utils import build_reduce, prewitt_kernel, gradient2d, tensor_norm
+from piqa.utils import build_reduce, prewitt_kernel, gradient2d, tensor_norm
 
 _LHM_WEIGHTS = torch.FloatTensor([
     [0.2989, 0.587, 0.114],

@@ -9,7 +9,7 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from spiq.utils import build_reduce, tensor_norm
+from piqa.utils import build_reduce, tensor_norm
 
 
 def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:

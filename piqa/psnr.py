@@ -9,7 +9,7 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from spiq.utils import build_reduce
+from piqa.utils import build_reduce
 
 from typing import Tuple
 

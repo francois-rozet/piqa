@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-from spiq.utils import build_reduce, normalize_tensor, Intermediary
+from piqa.utils import build_reduce, normalize_tensor, Intermediary
 
 _SHIFT = torch.Tensor([0.485, 0.456, 0.406])
 _SCALE = torch.Tensor([0.229, 0.224, 0.225])
