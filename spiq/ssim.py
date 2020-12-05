@@ -24,6 +24,8 @@ import torch.nn.functional as F
 
 from spiq.utils import build_reduce, gaussian_kernel
 
+from typing import Tuple
+
 _WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
 
 
@@ -50,7 +52,7 @@ def ssim_per_channel(
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     r"""Returns the SSIM and the contrast sensitivity per channel
     between `x` and `y`.
 
