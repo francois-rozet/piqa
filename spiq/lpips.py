@@ -28,19 +28,23 @@ class LPIPS(nn.Module):
     between an input and a target.
 
     Args:
-        network: A perception network name (`'AlexNet'`,
-            `'SqueezeNet'` or `'VGG16'`).
-        scaling: Whether the input and target are scaled w.r.t. ImageNet.
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        network: Specifies the perception network to use:
+            `'AlexNet'` | `'SqueezeNet'` | `'VGG16'`.
+        scaling: Whether the input and target need to
+            be scaled w.r.t. ImageNet.
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
-    Call:
-        The input and target tensors should be of shape (N, C, H, W).
+    Shape:
+        * Input: (N, 3, H, W)
+        * Target: (N, 3, H, W)
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(
         self,
         network: str = 'AlexNet',
-        scaling: bool = False,
+        scaling: bool = True,
         reduction: str = 'mean',
         trainable: bool = False,
     ):

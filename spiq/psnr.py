@@ -42,13 +42,16 @@ class PSNR(nn.Module):
     between an input and a target.
 
     Args:
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `psnr`, with
         the exception of `dim` and `keepdim`.
 
-    Call:
-        The input and target tensors should be of shape (N, ...).
+    Shape:
+        * Input: (N, *), where * means any number of additional dimensions
+        * Target: (N, *), same shape as the input
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
@@ -66,9 +69,9 @@ class PSNR(nn.Module):
         target: torch.Tensor,
     ) -> torch.Tensor:
         l = psnr(
-            input,
-            target,
-            dim=tuple(range(1, input.ndimension())),
+            input.unsqueeze(1).flatten(1),
+            target.unsqueeze(1).flatten(1),
+            dim=1,
             **self.kwargs,
         )
 

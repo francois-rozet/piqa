@@ -180,12 +180,15 @@ class SSIM(nn.Module):
     Args:
         window_size: The size of the window.
         n_channels: A number of channels.
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `ssim_per_channel`.
 
-    Call:
-        The input and target tensors should be of shape (N, C, H, W).
+    Shape:
+        * Input: (N, C, H, W)
+        * Target: (N, C, H, W), same shape as the input
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(
@@ -226,8 +229,10 @@ class MSSSIM(SSIM):
 
         `**kwargs` are transmitted to `msssim_per_channel`.
 
-    Call:
-        The input and target tensors should be of shape (N, C, H, W).
+    Shape:
+        * Input: (N, C, H, W)
+        * Target: (N, C, H, W), same shape as the input
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def forward(

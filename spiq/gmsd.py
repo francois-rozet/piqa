@@ -75,12 +75,15 @@ class GMSD(nn.Module):
     between an input and a target.
 
     Args:
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `gmsd`.
 
-    Call:
-        The input and target tensors should be of shape (N, 3, H, W).
+    Shape:
+        * Input: (N, 3, H, W)
+        * Target: (N, 3, H, W)
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):

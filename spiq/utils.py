@@ -16,7 +16,8 @@ def build_reduce(
     r"""Returns a reduce function.
 
     Args:
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduce function:
+            `'none'` | `'mean'` | `'sum'`.
         dim: The dimension(s) along which to reduce.
         keepdim: Whether the output tensor has `dim` retained or not.
     """
@@ -130,7 +131,8 @@ def tensor_norm(
         x: An input tensor.
         dim: The dimension(s) along which to calculate the norm.
         keepdim: Whether the output tensor has `dim` retained or not.
-        norm: A norm function name (`'L1'`, `'L2'` or `'L2_squared'`).
+        norm: Specifies the norm funcion to apply:
+            `'L1'` | `'L2'` | `'L2_squared'`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Norm_(mathematics)

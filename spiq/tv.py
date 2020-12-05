@@ -16,8 +16,9 @@ def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
     r"""Returns the TV of `x`.
 
     Args:
-        x: An input tensor, (..., C, H, W).
-        norm: A norm function name (`'L1'`, `'L2'` or `'L2_squared'`).
+        x: An input tensor, (*, C, H, W).
+        norm: Specifies the norm funcion to apply:
+            `'L1'` | `'L2'` | `'L2_squared'`.
     """
 
     variation = torch.cat([
@@ -34,12 +35,14 @@ class TV(nn.Module):
     r"""Creates a criterion that measures the TV of an input.
 
     Args:
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `tv`.
 
-    Call:
-        The input tensor should be of shape (N, C, H, W).
+    Shape:
+        * Input: (N, C, H, W)
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):

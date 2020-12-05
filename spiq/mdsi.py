@@ -26,13 +26,13 @@ def mdsi(
     x: torch.Tensor,
     y: torch.Tensor,
     value_range: float = 1.,
-    combine: str = 'sum',
+    combination: str = 'sum',
     c1: float = 0.00215,  # 140. / (255. ** 2)
     c2: float = 0.00085,  # 55. / (255. ** 2)
     c3: float = 0.00846,  # 550. / (255. ** 2)
-    alpha: float = 0.6,
-    beta: float = 0.1,
-    gamma: float = 0.2,
+    alpha: float = 0.6,  # 'sum'
+    beta: float = 0.1,  # 'prod'
+    gamma: float = 0.2,  # 'prod'
     rho: float = 1.,
     q: float = 0.25,
     o: float = 0.25,
@@ -43,8 +43,9 @@ def mdsi(
         x: An input tensor, (N, 3, H, W).
         y: A target tensor, (N, 3, H, W).
         value_range: The value range of the inputs (usually 1. or 255).
-        combine: The combination scheme of the gradient similarity (GS) and
-            the chromaticity similarity (CS) (`'sum'` or `'prod'`).
+        combination: Specifies the scheme to combine the gradient
+            and chromaticity similarities (GS, CS):
+            `'sum'` | `'prod'`.
 
         For the remaining arguments, refer to [1].
     """
@@ -94,9 +95,9 @@ def mdsi(
     # Gradient-chromaticity similarity
     gs, cs = gs.type(torch.cfloat), cs.type(torch.cfloat)
 
-    if combine == 'prod':
+    if combination == 'prod':
         gcs = (gs ** gamma) * (cs ** beta)
-    else:  # combine == 'sum'
+    else:  # combination == 'sum'
         gcs = alpha * gs + (1. - alpha) * cs
 
     # Mean deviation similarity
@@ -112,12 +113,15 @@ class MDSI(nn.Module):
     between an input and a target.
 
     Args:
-        reduction: A reduction type (`'mean'`, `'sum'` or `'none'`).
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `mdsi`.
 
-    Call:
-        The input and target tensors should be of shape (N, 3, H, W).
+    Shape:
+        * Input: (N, 3, H, W)
+        * Target: (N, 3, H, W)
+        * Output: (N,) or (1,) depending on `reduction`
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
