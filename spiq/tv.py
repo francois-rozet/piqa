@@ -46,12 +46,16 @@ class TV(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
+        r""""""
         super().__init__()
 
         self.reduce = build_reduce(reduction)
         self.kwargs = kwargs
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = tv(input, **self.kwargs)
 
         return self.reduce(l)

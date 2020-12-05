@@ -48,6 +48,7 @@ class LPIPS(nn.Module):
         reduction: str = 'mean',
         trainable: bool = False,
     ):
+        r""""""
         super().__init__()
 
         # ImageNet scaling
@@ -97,6 +98,9 @@ class LPIPS(nn.Module):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         if self.scaling:
             input = (input - self.shift) / self.scale
             target = (target - self.shift) / self.scale

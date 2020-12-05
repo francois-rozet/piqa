@@ -87,6 +87,7 @@ class GMSD(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
+        r""""""
         super().__init__()
 
         self.reduce = build_reduce(reduction)
@@ -97,6 +98,9 @@ class GMSD(nn.Module):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = gmsd(input, target, **self.kwargs)
 
         return self.reduce(l)

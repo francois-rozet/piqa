@@ -180,12 +180,16 @@ class Intermediary(nn.Module):
     """
 
     def __init__(self, layers: nn.Sequential, targets: List[int]):
+        r""""""
         super().__init__()
 
         self.layers = layers
         self.targets = set(targets)
 
     def forward(self, input: torch.Tensor) -> List[torch.Tensor]:
+        r"""Defines the computation performed at every call.
+        """
+
         output = []
 
         for i, layer in enumerate(self.layers):

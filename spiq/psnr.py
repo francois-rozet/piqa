@@ -55,6 +55,7 @@ class PSNR(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
+        r""""""
         super().__init__()
 
         self.reduce = build_reduce(reduction)
@@ -68,6 +69,9 @@ class PSNR(nn.Module):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = psnr(
             input.unsqueeze(1).flatten(1),
             target.unsqueeze(1).flatten(1),

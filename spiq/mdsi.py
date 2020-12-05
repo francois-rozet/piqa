@@ -125,6 +125,7 @@ class MDSI(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
+        r""""""
         super().__init__()
 
         self.reduce = build_reduce(reduction)
@@ -135,6 +136,9 @@ class MDSI(nn.Module):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = mdsi(input, target, **self.kwargs)
 
         return self.reduce(l)

@@ -198,6 +198,7 @@ class SSIM(nn.Module):
         reduction: str = 'mean',
         **kwargs,
     ):
+        r""""""
         super().__init__()
 
         self.register_buffer('window', create_window(window_size, n_channels))
@@ -210,6 +211,9 @@ class SSIM(nn.Module):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = ssim_per_channel(
             input,
             target,
@@ -240,6 +244,9 @@ class MSSSIM(SSIM):
         input: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         l = msssim_per_channel(
             input,
             target,
