@@ -30,6 +30,33 @@ def build_reduce(
     return lambda x: x
 
 
+def unravel_index(
+    indices: torch.LongTensor,
+    shape: Tuple[int, ...],
+) -> torch.LongTensor:
+    r"""Converts flat indices into unraveled coordinates in a target shape.
+
+    This is a `torch` implementation of `numpy.unravel_index`.
+
+    Args:
+        indices: A tensor of (flat) indices, (*, N).
+        shape: The targeted shape, (D,).
+
+    Returns:
+        The unraveled coordinates, (*, N, D).
+    """
+
+    coord = []
+
+    for dim in reversed(shape):
+        coord.append(indices % dim)
+        indices = indices // dim
+
+    coord = torch.stack(coord[::-1], dim=-1)
+
+    return coord
+
+
 def gaussian_kernel(
     kernel_size: int,
     sigma: float = 1.,
@@ -49,21 +76,19 @@ def gaussian_kernel(
         https://en.wikipedia.org/wiki/Normal_distribution
     """
 
-    distrib = torch.arange(kernel_size).float()
-    distrib -= (kernel_size - 1) / 2
-    distrib = distrib ** 2
+    shape = (kernel_size,) * n
 
-    kernel = distrib.clone()
+    kernel = unravel_index(
+        torch.arange(kernel_size ** n),
+        shape,
+    ).float()
 
-    for i in range(1, n):
-        distrib = distrib.unsqueeze(0)
-        kernel = kernel.unsqueeze(i)
-        kernel = kernel + distrib
-
-    kernel = torch.exp(-kernel / (2 * sigma ** 2))
+    kernel -= (kernel_size - 1) / 2
+    kernel = (kernel ** 2).sum(1) / (2. * sigma ** 2)
+    kernel = torch.exp(-kernel)
     kernel /= kernel.sum()
 
-    return kernel
+    return kernel.reshape(shape)
 
 
 def gradient2d(x: torch.Tensor, kernel: torch.Tensor) -> torch.Tensor:
