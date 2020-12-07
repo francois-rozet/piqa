@@ -31,6 +31,13 @@ def psnr(
         keepdim: Whether the output tensor has `dim` retained or not.
         value_range: The value range of the inputs (usually 1. or 255).
         epsilon: A numerical stability term.
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = psnr(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     mse = ((x - y) ** 2).mean(dim=dim, keepdim=keepdim) + epsilon
@@ -52,6 +59,14 @@ class PSNR(nn.Module):
         * Input: (N, *), where * means any number of additional dimensions
         * Target: (N, *), same shape as the input
         * Output: (N,) or (1,) depending on `reduction`
+
+    Example:
+        >>> criterion = PSNR()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
@@ -60,8 +75,7 @@ class PSNR(nn.Module):
 
         self.reduce = build_reduce(reduction)
         self.kwargs = {
-            k: v for k, v in kwargs.items()
-            if k not in ['dim', 'keepdim']
+            k: v for k, v in kwargs.items() if k not in ['dim', 'keepdim']
         }
 
     def forward(

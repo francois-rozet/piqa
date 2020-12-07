@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import build_reduce, gaussian_kernel
+from piqa.utils import build_reduce, gaussian_kernel, filter2d
 
 from typing import Tuple
 
@@ -35,12 +35,21 @@ def create_window(window_size: int, n_channels: int) -> torch.Tensor:
     Args:
         window_size: The size of the window.
         n_channels: A number of channels.
+
+    Example:
+        >>> win = create_window(5, n_channels=3)
+        >>> win.size()
+        torch.Size([3, 1, 5, 5])
+        >>> win[0]
+        tensor([[[0.0144, 0.0281, 0.0351, 0.0281, 0.0144],
+                 [0.0281, 0.0547, 0.0683, 0.0547, 0.0281],
+                 [0.0351, 0.0683, 0.0853, 0.0683, 0.0351],
+                 [0.0281, 0.0547, 0.0683, 0.0547, 0.0281],
+                 [0.0144, 0.0281, 0.0351, 0.0281, 0.0144]]])
     """
 
     kernel = gaussian_kernel(window_size, 1.5)
-
-    window = kernel.unsqueeze(0).unsqueeze(0)
-    window = window.expand(n_channels, 1, window_size, window_size)
+    window = kernel.repeat(n_channels, 1, 1, 1)
 
     return window
 
@@ -63,28 +72,31 @@ def ssim_per_channel(
         value_range: The value range of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
-    """
 
-    n_channels, _, window_size, _ = window.size()
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> window = create_window(7, 3)
+        >>> ss, cs = ssim_per_channel(x, y, window)
+        >>> ss.size(), cs.size()
+        (torch.Size([5, 3]), torch.Size([5, 3]))
+    """
 
     c1 = (k1 * value_range) ** 2
     c2 = (k2 * value_range) ** 2
 
     # Mean (mu)
-    mu_x = F.conv2d(x, window, padding=0, groups=n_channels)
-    mu_y = F.conv2d(y, window, padding=0, groups=n_channels)
+    mu_x = filter2d(x, window)
+    mu_y = filter2d(y, window)
 
     mu_x_sq = mu_x ** 2
     mu_y_sq = mu_y ** 2
     mu_xy = mu_x * mu_y
 
     # Variance (sigma)
-    sigma_x_sq = F.conv2d(x ** 2, window, padding=0, groups=n_channels)
-    sigma_x_sq -= mu_x_sq
-    sigma_y_sq = F.conv2d(y ** 2, window, padding=0, groups=n_channels)
-    sigma_y_sq -= mu_y_sq
-    sigma_xy = F.conv2d(x * y, window, padding=0, groups=n_channels)
-    sigma_xy -= mu_xy
+    sigma_x_sq = filter2d(x ** 2, window) - mu_x_sq
+    sigma_y_sq = filter2d(y ** 2, window) - mu_y_sq
+    sigma_xy = filter2d(x * y, window) - mu_xy
 
     # Contrast sensitivity
     cs = (2. * sigma_xy + c2) / (sigma_x_sq + sigma_y_sq + c2)
@@ -109,6 +121,13 @@ def ssim(
         window_size: The size of the window.
 
         `**kwargs` are transmitted to `ssim_per_channel`.
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = ssim(x, y)
+        >>> l.size()
+        torch.Size([5])
     """
 
     n_channels = x.size(1)
@@ -131,6 +150,14 @@ def msssim_per_channel(
         window: A convolution window.
 
         `**kwargs` are transmitted to `ssim_per_channel`.
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> window = create_window(7, 3)
+        >>> l = msssim_per_channel(x, y, window)
+        >>> l.size()
+        torch.Size([5, 3])
     """
 
     weights = _WEIGHTS.to(x.device)
@@ -146,9 +173,8 @@ def msssim_per_channel(
         ss, cs = ssim_per_channel(x, y, window, **kwargs)
         mcs.append(torch.relu(cs))
 
-    msss = torch.stack(mcs[:-1] + [ss], dim=0)
-    msss = msss ** weights.view(-1, 1, 1)
-    msss = msss.prod(dim=0)
+    msss = torch.stack(mcs[:-1] + [ss], dim=-1)
+    msss = (msss ** weights).prod(dim=-1)
 
     return msss
 
@@ -167,6 +193,13 @@ def msssim(
         window_size: The size of the window.
 
         `**kwargs` are transmitted to `msssim_per_channel`.
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = msssim(x, y)
+        >>> l.size()
+        torch.Size([5])
     """
 
     n_channels = x.size(1)
@@ -191,6 +224,14 @@ class SSIM(nn.Module):
         * Input: (N, C, H, W)
         * Target: (N, C, H, W), same shape as the input
         * Output: (N,) or (1,) depending on `reduction`
+
+    Example:
+        >>> criterion = SSIM()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     def __init__(
@@ -239,6 +280,14 @@ class MSSSIM(SSIM):
         * Input: (N, C, H, W)
         * Target: (N, C, H, W), same shape as the input
         * Output: (N,) or (1,) depending on `reduction`
+
+    Example:
+        >>> criterion = MSSSIM()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     def forward(

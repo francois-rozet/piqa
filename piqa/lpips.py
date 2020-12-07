@@ -42,6 +42,11 @@ def get_weights(
             `'alex'` | `'squeeze'` | `'vgg'`.
         version: Specifies the official version release:
             `'v0.0'` | `'v0.1'`.
+
+    Example:
+        >>> w = get_weights(network='alex')
+        >>> w.keys()
+        dict_keys(['0.1.weight', '1.1.weight', '2.1.weight', '3.1.weight', '4.1.weight'])
     """
 
     # Load from URL
@@ -53,7 +58,7 @@ def get_weights(
     # Format keys
     weights = {
         k.replace('lin', '').replace('.model', ''): v
-        for k, v in weights.items()
+        for (k, v) in weights.items()
     }
 
     return weights
@@ -81,6 +86,14 @@ class LPIPS(nn.Module):
     Note:
         `LPIPS` is a *trainable* metric. To prevent the weights from updating,
         use the `torch.no_grad()` context or freeze the weights.
+
+    Example:
+        >>> criterion = LPIPS()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     def __init__(
@@ -124,8 +137,7 @@ class LPIPS(nn.Module):
             nn.Sequential(
                 nn.Dropout(inplace=True) if dropout else nn.Identity(),
                 nn.Conv2d(c, 1, kernel_size=1, stride=1, padding=0, bias=False),
-            )
-            for c in channels
+            ) for c in channels
         ])
 
         if pretrained:

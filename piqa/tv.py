@@ -19,6 +19,12 @@ def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
         x: An input tensor, (*, C, H, W).
         norm: Specifies the norm funcion to apply:
             `'L1'` | `'L2'` | `'L2_squared'`.
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> l = tv(x)
+        >>> l.size()
+        torch.Size([5])
     """
 
     w_var = x[..., :, 1:] - x[..., :, :-1]
@@ -51,6 +57,13 @@ class TV(nn.Module):
     Shape:
         * Input: (N, C, H, W)
         * Output: (N,) or (1,) depending on `reduction`
+
+    Example:
+        >>> criterion = TV()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x)
+        >>> l.size()
+        torch.Size([])
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):

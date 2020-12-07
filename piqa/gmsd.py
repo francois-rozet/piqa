@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import build_reduce, prewitt_kernel, gradient2d, tensor_norm
+from piqa.utils import build_reduce, prewitt_kernel, filter2d, tensor_norm
 
 _L_WEIGHTS = torch.FloatTensor([0.2989, 0.587, 0.114])
 
@@ -32,6 +32,13 @@ def gmsd(
         value_range: The value range of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = gmsd(x, y)
+        >>> l.size()
+        torch.Size([5])
     """
 
     _, _, h, w = x.size()
@@ -57,8 +64,8 @@ def gmsd(
     kernel = prewitt_kernel()
     kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1).to(x.device)
 
-    gm_x = tensor_norm(gradient2d(x, kernel), dim=1)
-    gm_y = tensor_norm(gradient2d(y, kernel), dim=1)
+    gm_x = tensor_norm(filter2d(x, kernel, padding=1), dim=1)
+    gm_y = tensor_norm(filter2d(y, kernel, padding=1), dim=1)
 
     # Gradient magnitude similarity
     gms = (2. * gm_x * gm_y + c) / (gm_x ** 2 + gm_y ** 2 + c)
@@ -84,6 +91,14 @@ class GMSD(nn.Module):
         * Input: (N, 3, H, W)
         * Target: (N, 3, H, W)
         * Output: (N,) or (1,) depending on `reduction`
+
+    Example:
+        >>> criterion = GMSD()
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = criterion(x, y)
+        >>> l.size()
+        torch.Size([])
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
