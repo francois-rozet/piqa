@@ -21,14 +21,22 @@ def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
             `'L1'` | `'L2'` | `'L2_squared'`.
     """
 
-    variation = torch.cat([
-        x[..., :, 1:] - x[..., :, :-1],
-        x[..., 1:, :] - x[..., :-1, :],
-    ], dim=-2)
+    w_var = x[..., :, 1:] - x[..., :, :-1]
+    h_var = x[..., 1:, :] - x[..., :-1, :]
 
-    tv = tensor_norm(variation, dim=(-1, -2, -3), norm=norm)
+    if norm in ['L2', 'L2_squared']:
+        w_var = w_var ** 2
+        h_var = h_var ** 2
+    else:  # norm == 'L1'
+        w_var = w_var.abs()
+        h_var = h_var.abs()
 
-    return tv
+    var = w_var.sum(dim=(-1, -2, -3)) + h_var.sum(dim=(-1, -2, -3))
+
+    if norm == 'L2':
+        var = torch.sqrt(var)
+
+    return var
 
 
 class TV(nn.Module):
