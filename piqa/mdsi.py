@@ -112,7 +112,9 @@ def mdsi(
 
     # Mean deviation similarity
     gcs_q = gcs ** q
-    score = (gcs_q - gcs_q.mean((-1, -2), keepdim=True)).abs()
+    gcs_q_avg = torch.view_as_real(gcs_q).mean((-2, -3), True)
+    gcs_q_avg = torch.view_as_complex(gcs_q_avg)
+    score = (gcs_q - gcs_q_avg).abs()
     mds = (score ** rho).mean((-1, -2)) ** (o / rho)
 
     return mds
