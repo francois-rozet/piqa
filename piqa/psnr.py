@@ -62,8 +62,8 @@ class PSNR(nn.Module):
 
     Example:
         >>> criterion = PSNR()
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
+        >>> x = torch.rand(5, 3, 256, 256).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])

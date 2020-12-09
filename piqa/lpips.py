@@ -88,9 +88,9 @@ class LPIPS(nn.Module):
         use the `torch.no_grad()` context or freeze the weights.
 
     Example:
-        >>> criterion = LPIPS()
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
+        >>> criterion = LPIPS().cuda()
+        >>> x = torch.rand(5, 3, 256, 256).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])

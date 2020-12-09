@@ -226,9 +226,9 @@ class SSIM(nn.Module):
         * Output: (N,) or (1,) depending on `reduction`
 
     Example:
-        >>> criterion = SSIM()
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
+        >>> criterion = SSIM().cuda()
+        >>> x = torch.rand(5, 3, 256, 256).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
@@ -282,9 +282,9 @@ class MSSSIM(SSIM):
         * Output: (N,) or (1,) depending on `reduction`
 
     Example:
-        >>> criterion = MSSSIM()
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
+        >>> criterion = MSSSIM().cuda()
+        >>> x = torch.rand(5, 3, 256, 256).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])

@@ -60,7 +60,7 @@ class TV(nn.Module):
 
     Example:
         >>> criterion = TV()
-        >>> x = torch.rand(5, 3, 256, 256)
+        >>> x = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x)
         >>> l.size()
         torch.Size([])
