@@ -15,6 +15,8 @@ References:
     https://arxiv.org/abs/1607.06140
 """
 
+__pdoc__ = {'_haarpsi': True}
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -120,7 +122,7 @@ def haarpsi(
     y: torch.Tensor,
     chromatic: bool = True,
     **kwargs,
-):
+) -> torch.Tensor:
     r"""Returns the HaarPSI between `x` and `y`.
 
     Args:

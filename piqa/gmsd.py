@@ -15,6 +15,8 @@ References:
     https://ieeexplore.ieee.org/document/7952357
 """
 
+__pdoc__ = {'_gmsd': True, '_msgmsd': True}
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

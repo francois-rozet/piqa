@@ -9,6 +9,8 @@ References:
     https://arxiv.org/abs/1608.07433
 """
 
+__pdoc__ = {'_mdsi': True}
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
