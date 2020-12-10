@@ -68,7 +68,7 @@ def ssim_per_channel(
     Args:
         x: An input tensor, (N, C, H, W).
         y: A target tensor, (N, C, H, W).
-        window: A convolution window.
+        window: A convolution window, (C, 1, K, K).
         value_range: The value range of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
@@ -140,6 +140,7 @@ def msssim_per_channel(
     x: torch.Tensor,
     y: torch.Tensor,
     window: torch.Tensor,
+    weights: torch.Tensor,
     **kwargs,
 ) -> torch.Tensor:
     """Returns the MS-SSIM per channel between `x` and `y`.
@@ -147,7 +148,8 @@ def msssim_per_channel(
     Args:
         x: An input tensor, (N, C, H, W).
         y: A target tensor, (N, C, H, W).
-        window: A convolution window.
+        window: A convolution window, (C, 1, K, K).
+        weights: The weights of the scales, (M,).
 
         `**kwargs` are transmitted to `ssim_per_channel`.
 
@@ -155,25 +157,23 @@ def msssim_per_channel(
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
         >>> window = create_window(7, 3)
-        >>> l = msssim_per_channel(x, y, window)
+        >>> weights = torch.rand(5)
+        >>> l = msssim_per_channel(x, y, window, weights)
         >>> l.size()
         torch.Size([5, 3])
     """
 
-    weights = _WEIGHTS.to(x.device)
-
-    mcs = []
+    css = []
 
     for i in range(weights.numel()):
         if i > 0:
-            padding = (x.shape[-2] % 2, x.shape[-1] % 2)
-            x = F.avg_pool2d(x, kernel_size=2, padding=padding)
-            y = F.avg_pool2d(y, kernel_size=2, padding=padding)
+            x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
+            y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
 
         ss, cs = ssim_per_channel(x, y, window, **kwargs)
-        mcs.append(torch.relu(cs))
+        css.append(torch.relu(cs))
 
-    msss = torch.stack(mcs[:-1] + [ss], dim=-1)
+    msss = torch.stack(css[:-1] + [ss], dim=-1)
     msss = (msss ** weights).prod(dim=-1)
 
     return msss
@@ -183,6 +183,7 @@ def msssim(
     x: torch.Tensor,
     y: torch.Tensor,
     window_size: int = 11,
+    weights: torch.Tensor = None,
     **kwargs,
 ) -> torch.Tensor:
     r"""Returns the MS-SSIM between `x` and `y`.
@@ -191,6 +192,8 @@ def msssim(
         x: An input tensor, (N, C, H, W).
         y: A target tensor, (N, C, H, W).
         window_size: The size of the window.
+        weights: The weights of the scales, (M,).
+            If `None`, use the official weights instead.
 
         `**kwargs` are transmitted to `msssim_per_channel`.
 
@@ -205,7 +208,10 @@ def msssim(
     n_channels = x.size(1)
     window = create_window(window_size, n_channels).to(x.device)
 
-    return msssim_per_channel(x, y, window, **kwargs).mean(-1)
+    if weights is None:
+        weights = _WEIGHTS.to(x.device)
+
+    return msssim_per_channel(x, y, window, weights, **kwargs).mean(-1)
 
 
 class SSIM(nn.Module):
@@ -267,12 +273,17 @@ class SSIM(nn.Module):
         return self.reduce(l)
 
 
-class MSSSIM(SSIM):
+class MSSSIM(nn.Module):
     r"""Creates a criterion that measures the MS-SSIM
     between an input and a target.
 
     Args:
-        All arguments are inherited from `SSIM`.
+        window_size: The size of the window.
+        n_channels: A number of channels.
+        weights: The weights of the scales, (M,).
+            If `None`, use the official weights instead.
+        reduction: Specifies the reduction to apply to the output:
+            `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `msssim_per_channel`.
 
@@ -290,6 +301,26 @@ class MSSSIM(SSIM):
         torch.Size([])
     """
 
+    def __init__(
+        self,
+        window_size: int = 11,
+        n_channels: int = 3,
+        weights: torch.Tensor = None,
+        reduction: str = 'mean',
+        **kwargs,
+    ):
+        r""""""
+        super().__init__()
+
+        if weights is None:
+            weights = _WEIGHTS
+
+        self.register_buffer('window', create_window(window_size, n_channels))
+        self.register_buffer('weights', weights)
+
+        self.reduce = build_reduce(reduction)
+        self.kwargs = kwargs
+
     def forward(
         self,
         input: torch.Tensor,
@@ -302,6 +333,7 @@ class MSSSIM(SSIM):
             input,
             target,
             window=self.window,
+            weights=self.weights,
             **self.kwargs,
         ).mean(-1)
 
