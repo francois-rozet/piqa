@@ -75,6 +75,7 @@ class LPIPS(nn.Module):
             be scaled w.r.t. ImageNet.
         dropout: Whether dropout is used or not.
         pretrained: Whether the official pretrained weights are used or not.
+        eval: Whether to initialize the object in evaluation mode or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
@@ -84,8 +85,7 @@ class LPIPS(nn.Module):
         * Output: (N,) or (1,) depending on `reduction`
 
     Note:
-        `LPIPS` is a *trainable* metric. To prevent the weights from updating,
-        use the `torch.no_grad()` context or freeze the weights.
+        `LPIPS` is a *trainable* metric.
 
     Example:
         >>> criterion = LPIPS().cuda()
@@ -102,6 +102,7 @@ class LPIPS(nn.Module):
         scaling: bool = True,
         dropout: bool = True,
         pretrained: bool = True,
+        eval: bool = True,
         reduction: str = 'mean',
     ):
         r""""""
@@ -142,6 +143,9 @@ class LPIPS(nn.Module):
 
         if pretrained:
             self.lin.load_state_dict(get_weights(network=network))
+
+        if eval:
+            self.eval()
 
         self.reduce = build_reduce(reduction)
 
