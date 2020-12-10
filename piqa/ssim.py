@@ -26,7 +26,7 @@ from piqa.utils import build_reduce, gaussian_kernel, filter2d
 
 from typing import Tuple
 
-_WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
+_MS_WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
 
 
 def create_window(window_size: int, n_channels: int) -> torch.Tensor:
@@ -209,7 +209,7 @@ def msssim(
     window = create_window(window_size, n_channels).to(x.device)
 
     if weights is None:
-        weights = _WEIGHTS.to(x.device)
+        weights = _MS_WEIGHTS.to(x.device)
 
     return msssim_per_channel(x, y, window, weights, **kwargs).mean(-1)
 
@@ -313,7 +313,7 @@ class MSSSIM(nn.Module):
         super().__init__()
 
         if weights is None:
-            weights = _WEIGHTS
+            weights = _MS_WEIGHTS
 
         self.register_buffer('window', create_window(window_size, n_channels))
         self.register_buffer('weights', weights)
