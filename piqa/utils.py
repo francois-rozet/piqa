@@ -152,6 +152,24 @@ def filter2d(
     return F.conv2d(x, kernel, padding=padding, groups=x.size(1))
 
 
+def haar_kernel(size: int):
+    r"""Returns the (horizontal) Haar kernel.
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Haar_wavelet
+
+    Example:
+        >>> haar_kernel(2)
+        tensor([[ 0.5000, -0.5000],
+                [ 0.5000, -0.5000]])
+    """
+
+    kernel = torch.ones((size, size)) / size
+    kernel[:, size // 2:] *= -1
+
+    return kernel
+
+
 def prewitt_kernel() -> torch.Tensor:
     r"""Returns the (horizontal) 3x3 Prewitt kernel.
 

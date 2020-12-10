@@ -14,6 +14,7 @@ import piqa.ssim
 import piqa.lpips
 import piqa.mdsi
 import piqa.gmsd
+import piqa.haarpsi
 
 
 def add_doctests(suite, modules):
@@ -34,6 +35,7 @@ if __name__ == '__main__':
             piqa.lpips,
             piqa.mdsi,
             piqa.gmsd,
+            piqa.haarpsi,
         ],
     )
 
