@@ -46,7 +46,7 @@ def _haarpsi(
     Args:
         x: An input tensor, (N, 3 or 1, H, W).
         y: A target tensor, (N, 3 or 1, H, W).
-        value_range: The number of value range of the inputs (usually 1. or 255).
+        value_range: The value range of the inputs (usually 1. or 255).
         n_kernels: The number of Haar wavelet kernels to use.
 
         For the remaining arguments, refer to [1].
@@ -163,6 +163,7 @@ class HaarPSI(nn.Module):
     between an input and a target.
 
     Args:
+        chromatic: Whether to use the chromatic channels of not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
