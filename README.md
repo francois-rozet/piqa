@@ -1,3 +1,7 @@
+<p align="center"><img src="https://raw.githubusercontent.com/francois-rozet/piqa/master/banner.svg" width="80%"></p>
+
+> PIQA is not endorsed by Facebook, Inc.; PyTorch, the PyTorch logo and any related marks are trademarks of Facebook, Inc.
+
 # PyTorch Image Quality Assessment
 
 This package is a collection of measures and metrics for image quality assessment in various image processing tasks such as denoising, super-resolution, image interpolation, etc. It relies heavily on [PyTorch](https://github.com/pytorch/pytorch) and takes advantage of its efficiency and automatic differentiation.
