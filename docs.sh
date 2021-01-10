@@ -20,4 +20,3 @@ rm -rf html
 
 git add docs/*
 git commit -m "📝 HTLM documentation"
-git push --force
