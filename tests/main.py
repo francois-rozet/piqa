@@ -7,37 +7,33 @@ import unittest
 
 sys.path.append(os.path.abspath('..'))
 
-import piqa.utils
-import piqa.tv
-import piqa.psnr
-import piqa.ssim
-import piqa.lpips
-import piqa.mdsi
-import piqa.gmsd
-import piqa.haarpsi
-
-
-def add_doctests(suite, modules):
-    for m in modules:
-        suite.addTests(doctest.DocTestSuite(m))
+from piqa import (
+    utils,
+    tv,
+    psnr,
+    ssim,
+    lpips,
+    mdsi,
+    gmsd,
+    haarpsi,
+)
 
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
+    modules = [
+        utils,
+        tv,
+        psnr,
+        ssim,
+        lpips,
+        mdsi,
+        gmsd,
+        haarpsi,
+    ]
 
-    add_doctests(
-        suite,
-        [
-            piqa.utils,
-            piqa.tv,
-            piqa.psnr,
-            piqa.ssim,
-            piqa.lpips,
-            piqa.mdsi,
-            piqa.gmsd,
-            piqa.haarpsi,
-        ],
-    )
+    for m in modules:
+        suite.addTests(doctest.DocTestSuite(m))
 
     runner = unittest.TextTestRunner()
     runner.run(suite)
