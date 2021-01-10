@@ -15,7 +15,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import build_reduce, prewitt_kernel, filter2d, tensor_norm
+from piqa.utils import (
+    build_reduce,
+    prewitt_kernel,
+    filter2d,
+    tensor_norm,
+    cpow,
+)
 
 _LHM_WEIGHTS = torch.FloatTensor([
     [0.299, 0.587, 0.114],
@@ -102,7 +108,7 @@ def _mdsi(
         gcs = alpha * gs + (1. - alpha) * cs
 
     # Mean deviation similarity
-    gcs_q = gcs ** q
+    gcs_q = cpow(gcs, q)
     gcs_q_avg = torch.view_as_real(gcs_q).mean((-2, -3), True)
     gcs_q_avg = torch.view_as_complex(gcs_q_avg)
     score = (gcs_q - gcs_q_avg).abs()

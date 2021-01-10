@@ -303,6 +303,28 @@ def normalize_tensor(
     return x / (norm + epsilon)
 
 
+def cpow(
+    x: torch.cfloat,
+    exponent: Union[int, float, torch.Tensor],
+) -> torch.cfloat:
+    r"""Returns the power of `x` with `exponent`.
+
+    Args:
+        x: A complex input tensor.
+        exponent: The exponent value or tensor.
+
+    Example:
+        >>> x = torch.tensor([1. + 0.j, 0.707 + 0.707j])
+        >>> cpow(x, 2)
+        tensor([ 1.0000e+00+0.0000j, -4.3698e-08+0.9997j])
+    """
+
+    r = x.abs() ** exponent
+    phi = torch.atan2(x.imag, x.real) * exponent
+
+    return torch.complex(r * torch.cos(phi), r * torch.sin(phi))
+
+
 class Intermediary(nn.Module):
     r"""Module that catches and returns the outputs of indermediate
     target layers of a sequential module during its forward pass.
