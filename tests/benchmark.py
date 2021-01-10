@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
-r"""Benchmark against other IQA packages
+r"""Benchmark against other packages
 
 Packages:
+    scikit-image: https://pypi.org/project/scikit-image/
     kornia: https://pypi.org/project/kornia/
     piq: https://pypi.org/project/piq/
     IQA-pytorch: https://pypi.org/project/IQA-pytorch/
+    pytorch-msssim: https://pypi.org/project/pytorch-msssim/
 """
 
+import numpy as np
 import os
 import pandas as pd
 import sys
@@ -18,9 +21,11 @@ import urllib.request as request
 from torchvision import transforms
 from PIL import Image, ImageFilter
 
+import skimage.metrics as sk
 import kornia.losses as kornia
 import piq
 import IQA_pytorch as IQA
+import pytorch_msssim as vainf
 
 sys.path.append(os.path.abspath('..'))
 
@@ -38,11 +43,13 @@ from piqa import (
 if __name__ == '__main__':
     lenna = 'https://upload.wikimedia.org/wikipedia/en/7/7d/Lenna_%28test_image%29.png'
 
-    x = Image.open(request.urlopen(lenna))
-    y = x.filter(ImageFilter.BLUR)
+    truth = Image.open(request.urlopen(lenna))
+    noisy = truth.filter(ImageFilter.BLUR)
 
-    x = transforms.ToTensor()(x).unsqueeze(0).cuda()
-    y = transforms.ToTensor()(y).unsqueeze(0).cuda()
+    noisy, truth = np.array(noisy), np.array(truth)
+
+    x = transforms.ToTensor()(noisy).unsqueeze(0).cuda()
+    y = transforms.ToTensor()(truth).unsqueeze(0).cuda()
 
     x.requires_grad_()
     y.requires_grad_()
@@ -55,17 +62,28 @@ if __name__ == '__main__':
             'TV': tv.TV(),
         },
         ('PSNR', 2): {
+            'sk.psnr': sk.peak_signal_noise_ratio,
             'piq.psnr': piq.psnr,
             'psnr': psnr.psnr,
             'kornia.PSNR': kornia.PSNRLoss(max_val=1.),
             'PSNR': psnr.PSNR(),
         },
         ('SSIM', 2): {
+            'sk.ssim': lambda x, y: sk.structural_similarity(
+                x, y,
+                win_size=11,
+                multichannel=True,
+                gaussian_weights=True,
+            ),
             'piq.ssim': piq.ssim,
             'ssim': ssim.ssim,
-            'kornia.SSIM-halfloss': kornia.SSIM(window_size=11, reduction='mean'),
+            'kornia.SSIM-halfloss': kornia.SSIM(
+                window_size=11,
+                reduction='mean',
+            ),
             'piq.SSIM-loss': piq.SSIMLoss(),
             'IQA.SSIM-loss': IQA.SSIM(),
+            'vainf.SSIM': vainf.SSIM(data_range=1.),
             'SSIM': ssim.SSIM(),
         },
         ('MS-SSIM', 2): {
@@ -73,6 +91,7 @@ if __name__ == '__main__':
             'msssim': ssim.msssim,
             'piq.MSSSIM-loss': piq.MultiScaleSSIMLoss(),
             'IQA.MSSSIM-loss': IQA.MS_SSIM(),
+            'vainf.MSSSIM': vainf.MS_SSIM(data_range=1.),
             'MSSSIM': ssim.MSSSIM(),
         },
         ('LPIPS', 2): {
@@ -121,10 +140,15 @@ if __name__ == '__main__':
             if hasattr(method, 'to'):
                 method.to(x.device)
 
-            if nargs == 1:
-                f = lambda: method(x).squeeze()
+            if key.startswith('sk.'):
+                a, b = truth, noisy
             else:
-                f = lambda: method(x, y).squeeze()
+                a, b = x, y
+
+            if nargs == 1:
+                f = lambda: method(a).mean()
+            else:
+                f = lambda: method(a, b).mean()
 
             if key.endswith('-loss'):
                 key = key.replace('-loss', '')
