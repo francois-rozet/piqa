@@ -89,20 +89,20 @@ def ssim_per_channel(
     mu_x = filter2d(x, window)
     mu_y = filter2d(y, window)
 
-    mu_x_sq = mu_x ** 2
-    mu_y_sq = mu_y ** 2
+    mu_xx = mu_x ** 2
+    mu_yy = mu_y ** 2
     mu_xy = mu_x * mu_y
 
     # Variance (sigma)
-    sigma_x_sq = filter2d(x ** 2, window) - mu_x_sq
-    sigma_y_sq = filter2d(y ** 2, window) - mu_y_sq
+    sigma_xx = filter2d(x ** 2, window) - mu_xx
+    sigma_yy = filter2d(y ** 2, window) - mu_yy
     sigma_xy = filter2d(x * y, window) - mu_xy
 
     # Contrast sensitivity
-    cs = (2. * sigma_xy + c2) / (sigma_x_sq + sigma_y_sq + c2)
+    cs = (2. * sigma_xy + c2) / (sigma_xx + sigma_yy + c2)
 
     # Structural similarity
-    ss = (2. * mu_x * mu_y + c1) / (mu_x_sq + mu_y_sq + c1) * cs
+    ss = (2. * mu_xy + c1) / (mu_xx + mu_yy + c1) * cs
 
     return ss.mean((-1, -2)), cs.mean((-1, -2))
 

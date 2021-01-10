@@ -69,12 +69,15 @@ def _gmsd(
 
     # Gradient magnitude similarity
     gms_num = (2. - alpha) * gm_xy + c
-    gms_den = gm_x ** 2 + gm_y ** 2 - alpha * gm_xy + c
+    gms_den = gm_x ** 2 + gm_y ** 2 + c
+
+    if alpha > 0.:
+        gms_den = gms_den - alpha * gm_xy
+
     gms = gms_num / gms_den
 
     # Gradient magnitude similarity deviation
-    gmsd = (gms - gms.mean((-1, -2), keepdim=True)) ** 2
-    gmsd = torch.sqrt(gmsd.mean((-1, -2)))
+    gmsd = torch.std(gms, dim=(-1, -2))
 
     return gmsd
 
