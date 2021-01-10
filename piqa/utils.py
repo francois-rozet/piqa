@@ -10,31 +10,27 @@ from typing import Callable, List, Tuple, Union
 
 def build_reduce(
     reduction: str = 'mean',
-    dim: Union[int, Tuple[int, ...]] = (),
-    keepdim: bool = False,
 ) -> Callable[[torch.Tensor], torch.Tensor]:
     r"""Returns a reduce function.
 
     Args:
         reduction: Specifies the reduce function:
             `'none'` | `'mean'` | `'sum'`.
-        dim: The dimension(s) along which to reduce.
-        keepdim: Whether the output tensor has `dim` retained or not.
 
     Example:
         >>> red = build_reduce(reduction='sum')
-        >>> type(red)
-        <class 'function'>
+        >>> callable(red)
+        True
         >>> red(torch.arange(5))
         tensor(10)
     """
 
     if reduction == 'mean':
-        return lambda x: x.mean(dim=dim, keepdim=keepdim)
+        return torch.mean
     elif reduction == 'sum':
-        return lambda x: x.sum(dim=dim, keepdim=keepdim)
+        return torch.sum
 
-    return lambda x: x
+    return nn.Identity()
 
 
 def unravel_index(
