@@ -59,6 +59,7 @@ def ssim_per_channel(
     y: torch.Tensor,
     window: torch.Tensor,
     value_range: float = 1.,
+    non_negative: bool = False,
     k1: float = 0.01,
     k2: float = 0.03,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -70,6 +71,7 @@ def ssim_per_channel(
         y: A target tensor, (N, C, H, W).
         window: A convolution window, (C, 1, K, K).
         value_range: The value range of the inputs (usually 1. or 255).
+        non_negative: Whether negative values are clipped or not.
 
         For the remaining arguments, refer to [1].
 
@@ -104,7 +106,13 @@ def ssim_per_channel(
     # Structural similarity
     ss = (2. * mu_xy + c1) / (mu_xx + mu_yy + c1) * cs
 
-    return ss.mean((-1, -2)), cs.mean((-1, -2))
+    # Average
+    ss, cs = ss.mean((-1, -2)), cs.mean((-1, -2))
+
+    if non_negative:
+        ss, cs = torch.relu(ss), torch.relu(cs)
+
+    return ss, cs
 
 
 def ssim(
@@ -151,7 +159,8 @@ def msssim_per_channel(
         window: A convolution window, (C, 1, K, K).
         weights: The weights of the scales, (M,).
 
-        `**kwargs` are transmitted to `ssim_per_channel`.
+        `**kwargs` are transmitted to `ssim_per_channel`, with
+        the exception of `non_negative`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -170,8 +179,8 @@ def msssim_per_channel(
             x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
             y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
 
-        ss, cs = ssim_per_channel(x, y, window, **kwargs)
-        css.append(torch.relu(cs))
+        ss, cs = ssim_per_channel(x, y, window, non_negative=True, **kwargs)
+        css.append(cs)
 
     msss = torch.stack(css[:-1] + [ss], dim=-1)
     msss = (msss ** weights).prod(dim=-1)
