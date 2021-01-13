@@ -1,10 +1,11 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: "🐛 <behavior> using <module>.<component>"
+name: 🐛 Bug report
+about: Report a bug to help PIQA improve
+title: <issue> using <module>.<component>
 labels: bug
-assignees: ''
 ---
+
+### 🐛 Bug
 
 #### Description
 
