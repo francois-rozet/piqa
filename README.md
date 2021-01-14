@@ -44,8 +44,8 @@ The `piqa` package is divided in several submodules, each of which implements th
 import torch
 from piqa import psnr, ssim
 
-x = torch.rand(3, 3, 256, 256).cuda()
-y = torch.rand(3, 3, 256, 256).cuda()
+x = torch.rand(3, 3, 256, 256, requires_grad=True).cuda()
+y = torch.rand(3, 3, 256, 256, requires_grad=True).cuda()
 
 # PSNR function
 l = psnr.psnr(x, y)
@@ -53,6 +53,7 @@ l = psnr.psnr(x, y)
 # SSIM instantiable object
 criterion = ssim.SSIM().cuda()
 l = criterion(x, y)
+l.backward()
 ```
 
 ### Metrics

@@ -5,4 +5,4 @@ which implements the functions and/or classes related to a
 specific image quality assessement metric.
 """
 
-__version__ = '1.0.12'
+__version__ = '1.0.13'

@@ -69,6 +69,7 @@ def _haarpsi(
     c *= value_range ** 2
 
     # Y
+    y_x, y_y = x[:, :1], y[:, :1]
 
     ## Gradient(s)
     g_xy: List[Tuple[Tensor, Tensor]] = []
@@ -82,10 +83,10 @@ def _haarpsi(
         ### Haar filter (gradient)
         pad = kernel_size // 2
 
-        g_x = channel_conv(x[:, :1], kernel, padding=pad).abs()
-        g_y = channel_conv(y[:, :1], kernel, padding=pad).abs()
+        g_x = channel_conv(y_x, kernel, padding=pad)[..., 1:, 1:].abs()
+        g_y = channel_conv(y_y, kernel, padding=pad)[..., 1:, 1:].abs()
 
-        g_xy.append((g_x[..., 1:, 1:], g_y[..., 1:, 1:]))
+        g_xy.append((g_x, g_y))
 
     ## Gradient similarity(ies)
     gs = []
@@ -100,15 +101,17 @@ def _haarpsi(
 
     # IQ
     if x.size(1) == 3:
+        iq_x, iq_y = x[:, 1:], y[:, 1:]
+
         ## Mean filter
-        m_x = F.avg_pool2d(x[:, 1:], 2, stride=1, padding=1).abs()
-        m_y = F.avg_pool2d(y[:, 1:], 2, stride=1, padding=1).abs()
+        m_x = F.avg_pool2d(iq_x, 2, stride=1, padding=1)[..., 1:, 1:].abs()
+        m_y = F.avg_pool2d(iq_y, 2, stride=1, padding=1)[..., 1:, 1:].abs()
 
         ## Chromatic similarity(ies)
         cs = (2. * m_x * m_y + c) / (m_x ** 2 + m_y ** 2 + c)
 
         ## Local similarity(ies)
-        ls = torch.cat([ls, cs[..., 1:, 1:].mean(1, True)], dim=1)  # (N, 3, H, W)
+        ls = torch.cat([ls, cs.mean(1, True)], dim=1)  # (N, 3, H, W)
 
         ## Weight(s)
         w = torch.cat([w, w.mean(1, True)], dim=1)  # (N, 3, H, W)
@@ -180,11 +183,12 @@ class HaarPSI(nn.Module):
 
     Example:
         >>> criterion = HaarPSI().cuda()
-        >>> x = torch.rand(5, 3, 256, 256).cuda()
-        >>> y = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
+        >>> l.backward()
     """
 
     def __init__(

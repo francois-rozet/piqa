@@ -22,7 +22,10 @@ from piqa.utils import (
     gradient_kernel,
     channel_conv,
     tensor_norm,
+    cstack,
+    cprod,
     cpow,
+    cabs,
 )
 
 _LHM_WEIGHTS = torch.FloatTensor([
@@ -32,6 +35,7 @@ _LHM_WEIGHTS = torch.FloatTensor([
 ])
 
 
+@_jit
 def _mdsi(
     x: torch.Tensor,
     y: torch.Tensor,
@@ -77,13 +81,16 @@ def _mdsi(
     c2 *= value_range ** 2
     c3 *= value_range ** 2
 
+    l_x, hm_x = x[:, :1], x[:, 1:]
+    l_y, hm_y = y[:, :1], y[:, 1:]
+
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = tensor_norm(channel_conv(x[:, :1], kernel, padding=pad), dim=[1])
-    gm_y = tensor_norm(channel_conv(y[:, :1], kernel, padding=pad), dim=[1])
+    gm_x = tensor_norm(channel_conv(l_x, kernel, padding=pad), dim=[1])
+    gm_y = tensor_norm(channel_conv(l_y, kernel, padding=pad), dim=[1])
     gm_avg = tensor_norm(
-        channel_conv((x + y)[:, :1] / 2., kernel, padding=pad),
+        channel_conv((l_x + l_y) / 2., kernel, padding=pad),
         dim=[1],
     )
 
@@ -97,24 +104,24 @@ def _mdsi(
     gs = gs_x_y + gs_x_avg - gs_y_avg
 
     # Chromaticity similarity
-    cs_num = 2. * (x[:, 1:] * y[:, 1:]).sum(1) + c3
-    cs_den = (x[:, 1:] ** 2 + y[:, 1:] ** 2).sum(1) + c3
+    cs_num = 2. * (hm_x * hm_y).sum(1) + c3
+    cs_den = (hm_x ** 2 + hm_y ** 2).sum(1) + c3
     cs = cs_num / cs_den
 
     # Gradient-chromaticity similarity
-    gs, cs = gs.type(torch.cfloat), cs.type(torch.cfloat)
+    gs = cstack(gs, torch.zeros_like(gs))
+    cs = cstack(cs, torch.zeros_like(cs))
 
     if combination == 'prod':
-        gcs = (gs ** gamma) * (cs ** beta)
+        gcs = cprod(cpow(gs, gamma), cpow(cs, beta))
     else:  # combination == 'sum'
         gcs = alpha * gs + (1. - alpha) * cs
 
     # Mean deviation similarity
     gcs_q = cpow(gcs, q)
-    gcs_q_avg = torch.view_as_real(gcs_q).mean((-2, -3), True)
-    gcs_q_avg = torch.view_as_complex(gcs_q_avg)
-    score = (gcs_q - gcs_q_avg).abs()
-    mds = (score ** rho).mean((-1, -2)) ** (o / rho)
+    gcs_q_avg = gcs_q.mean((-2, -3), True)
+    score = cabs(gcs_q - gcs_q_avg, squared=True) ** (rho / 2)
+    mds = score.mean((-1, -2)) ** (o / rho)
 
     return mds
 
@@ -182,11 +189,12 @@ class MDSI(nn.Module):
 
     Example:
         >>> criterion = MDSI().cuda()
-        >>> x = torch.rand(5, 3, 256, 256).cuda()
-        >>> y = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
+        >>> l.backward()
     """
 
     def __init__(

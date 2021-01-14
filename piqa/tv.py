@@ -31,12 +31,12 @@ def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
     w_var = x[..., :, 1:] - x[..., :, :-1]
     h_var = x[..., 1:, :] - x[..., :-1, :]
 
-    if norm in ['L2', 'L2_squared']:
-        w_var = w_var ** 2
-        h_var = h_var ** 2
-    else:  # norm == 'L1'
+    if norm == 'L1':
         w_var = w_var.abs()
         h_var = h_var.abs()
+    else:  # norm in ['L2', 'L2_squared']
+        w_var = w_var ** 2
+        h_var = h_var ** 2
 
     var = w_var.sum(dim=(-1, -2, -3)) + h_var.sum(dim=(-1, -2, -3))
 
@@ -61,10 +61,11 @@ class TV(nn.Module):
 
     Example:
         >>> criterion = TV()
-        >>> x = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x)
         >>> l.size()
         torch.Size([])
+        >>> l.backward()
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):

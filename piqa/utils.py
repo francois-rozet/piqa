@@ -24,7 +24,7 @@ def channel_conv(
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
-        >>> x = torch.arange(25).float().view(1, 1, 5, 5)
+        >>> x = torch.arange(25, dtype=torch.float).view(1, 1, 5, 5)
         >>> x
         tensor([[[[ 0.,  1.,  2.,  3.,  4.],
                   [ 5.,  6.,  7.,  8.,  9.],
@@ -55,15 +55,15 @@ def channel_sep_conv(
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
-        >>> x = torch.arange(25).float().view(1, 1, 5, 5)
+        >>> x = torch.arange(25, dtype=torch.float).view(1, 1, 5, 5)
         >>> x
         tensor([[[[ 0.,  1.,  2.,  3.,  4.],
                   [ 5.,  6.,  7.,  8.,  9.],
                   [10., 11., 12., 13., 14.],
                   [15., 16., 17., 18., 19.],
                   [20., 21., 22., 23., 24.]]]])
-        >>> kernels = [torch.ones((1, 1, 3, 1)), torch.ones((1, 1, 1, 3))]
-        >>> channel_sep_conv(x, kernels)
+        >>> kernel = [torch.ones((1, 1, 3, 1)), torch.ones((1, 1, 1, 3))]
+        >>> channel_sep_conv(x, kernel)
         tensor([[[[ 54.,  63.,  72.],
                   [ 99., 108., 117.],
                   [144., 153., 162.]]]])
@@ -141,10 +141,12 @@ def gaussian_kernel(
         https://en.wikipedia.org/wiki/Normal_distribution
 
     Example:
-        >>> k = gaussian_kernel(5, sigma=1.5)[0]
-        >>> k.size()
-        torch.Size([1, 1, 5, 1])
-        >>> k.squeeze()
+        >>> k = gaussian_kernel(5, sigma=1.5)
+        >>> k[0].size(), k[1].size()
+        (torch.Size([1, 1, 5, 1]), torch.Size([1, 1, 1, 5]))
+        >>> k[0].squeeze()
+        tensor([0.1201, 0.2339, 0.2921, 0.2339, 0.1201])
+        >>> k[1].squeeze()
         tensor([0.1201, 0.2339, 0.2921, 0.2339, 0.1201])
     """
 
@@ -289,10 +291,10 @@ def tensor_norm(
         tensor([6.7082, 8.1240, 9.6437])
     """
 
-    if norm in ['L2', 'L2_squared']:
-        x = x ** 2
-    else:  # norm == 'L1'
+    if norm == 'L1':
         x = x.abs()
+    else:  # norm in ['L2', 'L2_squared']
+        x = x ** 2
 
     x = x.sum(dim=dim, keepdim=keepdim)
 
@@ -318,7 +320,7 @@ def normalize_tensor(
         epsilon: A numerical stability term.
 
     Example:
-        >>> x = torch.arange(9).float().view(3, 3)
+        >>> x = torch.arange(9, dtype=torch.float).view(3, 3)
         >>> x
         tensor([[0., 1., 2.],
                 [3., 4., 5.],
@@ -334,26 +336,103 @@ def normalize_tensor(
     return x / (norm + epsilon)
 
 
-def cpow(
-    x: torch.cfloat,
-    exponent: Union[int, float, torch.Tensor],
-) -> torch.cfloat:
+def cstack(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
+    r"""Returns a complex tensor with its real part equal to `real` and
+    its imaginary part equal to `imag`.
+
+    Args:
+        real: An input tensor.
+        imag: An input tensor.
+
+    Example:
+        >>> x = torch.tensor([1., 0.707])
+        >>> y = torch.tensor([0., 0.707])
+        >>> cstack(x, y)
+        tensor([[1.0000, 0.0000],
+                [0.7070, 0.7070]])
+    """
+
+    return torch.stack([real, imag], dim=-1)
+
+
+def cprod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     r"""Returns the power of `x` with `exponent`.
 
     Args:
-        x: A complex input tensor.
+        x: A complex input tensor, (*, 2).
+        y: A complex input tensor, (*, 2).
+
+    Example:
+        >>> x = torch.tensor([[1.,  0.], [0.707,  0.707]])
+        >>> y = torch.tensor([[1., -0.], [0.707, -0.707]])
+        >>> cprod(x, y)
+        tensor([[1.0000, 0.0000],
+                [0.9997, 0.0000]])
+    """
+
+    x_r, x_i = x[..., 0], x[..., 1]
+    y_r, y_i = y[..., 0], y[..., 1]
+
+    return cstack(
+        x_r * y_r - x_i * y_i,
+        x_i * y_r + x_r * y_i,
+    )
+
+
+def cpow(x: torch.Tensor, exponent: float) -> torch.Tensor:
+    r"""Returns the power of `x` with `exponent`.
+
+    Args:
+        x: A complex input tensor, (*, 2).
         exponent: The exponent value or tensor.
 
     Example:
-        >>> x = torch.tensor([1. + 0.j, 0.707 + 0.707j])
-        >>> cpow(x, 2)
-        tensor([ 1.0000e+00+0.0000j, -4.3698e-08+0.9997j])
+        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
+        >>> cpow(x, 2.)
+        tensor([[ 1.0000e+00,  0.0000e+00],
+                [-4.3698e-08,  9.9970e-01]])
     """
 
-    r = x.abs() ** exponent
-    phi = torch.atan2(x.imag, x.real) * exponent
+    r = cabs(x, squared=True) ** (exponent / 2)
+    phi = cangle(x) * exponent
 
-    return torch.complex(r * torch.cos(phi), r * torch.sin(phi))
+    return cstack(r * torch.cos(phi), r * torch.sin(phi))
+
+
+def cabs(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
+    r"""Returns the absolute value (modulus) of `x`.
+
+    Args:
+        x: A complex input tensor, (*, 2).
+        squared: Whether the output is squared or not.
+
+    Example:
+        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
+        >>> cabs(x)
+        tensor([1.0000, 0.9998])
+    """
+
+    x = (x ** 2).sum(-1)
+
+    if not squared:
+        x = torch.sqrt(x)
+
+    return x
+
+
+def cangle(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the angle (phase) of `x`.
+
+    Args:
+        x: A complex input tensor, (*, 2).
+
+    Example:
+        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
+        >>> cangle(x)
+        tensor([0.0000, 0.7854])
+    """
+
+    return torch.atan2(x[..., 1], x[..., 0])
 
 
 class Intermediary(nn.Module):
@@ -406,8 +485,8 @@ def build_reduce(reduction: str = 'mean') -> nn.Module:
             `'none'` | `'mean'` | `'sum'`.
 
     Example:
-        >>> red = build_reduce(reduction='sum')
-        >>> red(torch.arange(5))
+        >>> r = build_reduce(reduction='sum')
+        >>> r(torch.arange(5))
         tensor(10)
     """
 

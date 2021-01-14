@@ -237,8 +237,8 @@ class SSIM(nn.Module):
 
     Example:
         >>> criterion = SSIM().cuda()
-        >>> x = torch.rand(5, 3, 256, 256).cuda()
-        >>> y = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
@@ -307,11 +307,12 @@ class MSSSIM(nn.Module):
 
     Example:
         >>> criterion = MSSSIM().cuda()
-        >>> x = torch.rand(5, 3, 256, 256).cuda()
-        >>> y = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
+        >>> l.backward()
     """
 
     def __init__(
