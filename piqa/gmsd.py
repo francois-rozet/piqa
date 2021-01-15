@@ -21,12 +21,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import build_reduce, prewitt_kernel, filter2d, tensor_norm
+from piqa.utils import (
+    _jit,
+    build_reduce,
+    prewitt_kernel,
+    gradient_kernel,
+    channel_conv,
+    tensor_norm,
+)
 
 _L_WEIGHTS = torch.FloatTensor([0.299, 0.587, 0.114])
 _MS_WEIGHTS = torch.FloatTensor([0.096, 0.596, 0.289, 0.019])
 
 
+@_jit
 def _gmsd(
     x: torch.Tensor,
     y: torch.Tensor,
@@ -46,12 +54,12 @@ def _gmsd(
         kernel: A 2D gradient kernel, (2, 1, K, K).
         value_range: The value range of the inputs (usually 1. or 255).
 
-        For the remaining arguments, refer to [1] and [2].
+        For the remaining arguments, refer to [1].
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
         >>> y = torch.rand(5, 1, 256, 256)
-        >>> kernel = torch.rand(2, 1, 3, 3)
+        >>> kernel = gradient_kernel(prewitt_kernel())
         >>> l = _gmsd(x, y, kernel)
         >>> l.size()
         torch.Size([5])
@@ -62,8 +70,8 @@ def _gmsd(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = tensor_norm(filter2d(x, kernel, padding=pad), dim=1)
-    gm_y = tensor_norm(filter2d(y, kernel, padding=pad), dim=1)
+    gm_x = tensor_norm(channel_conv(x, kernel, padding=pad), dim=[1])
+    gm_y = tensor_norm(channel_conv(y, kernel, padding=pad), dim=[1])
 
     gm_xy = gm_x * gm_y
 
@@ -118,20 +126,20 @@ def gmsd(
 
     # Kernel
     if kernel is None:
-        kernel = prewitt_kernel()
-        kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
-        kernel = kernel.to(x.device)
+        kernel = gradient_kernel(prewitt_kernel(), device=x.device)
 
     return _gmsd(x, y, kernel, **kwargs)
 
 
+@_jit
 def _msgmsd(
     x: torch.Tensor,
     y: torch.Tensor,
     kernel: torch.Tensor,
     weights: torch.Tensor,
+    value_range: float = 1.,
+    c: float = 0.00261,
     alpha: float = 0.5,
-    **kwargs,
 ) -> torch.Tensor:
     r"""Returns the MS-GMSD between `x` and `y`,
     without color space conversion.
@@ -143,13 +151,14 @@ def _msgmsd(
         y: A target tensor, (N, 1, H, W).
         kernel: A 2D gradient kernel, (2, 1, K, K).
         weights: The weights of the scales, (M,).
+        value_range: The value range of the inputs (usually 1. or 255).
 
-        `alpha` and `**kwargs` are transmitted to `_gmsd`.
+        For the remaining arguments, refer to [2].
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
         >>> y = torch.rand(5, 1, 256, 256)
-        >>> kernel = torch.rand(2, 1, 3, 3)
+        >>> kernel = gradient_kernel(prewitt_kernel())
         >>> weights = torch.rand(4)
         >>> l = _msgmsd(x, y, kernel, weights)
         >>> l.size()
@@ -163,7 +172,11 @@ def _msgmsd(
             x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
             y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
 
-        gmsds.append(_gmsd(x, y, kernel, alpha=alpha, **kwargs))
+        gmsds.append(_gmsd(
+            x, y, kernel,
+            value_range=value_range,
+            c=c, alpha=alpha,
+        ))
 
     msgmsd = torch.stack(gmsds, dim=-1) ** 2
     msgmsd = torch.sqrt((msgmsd * weights).sum(dim=-1))
@@ -206,9 +219,7 @@ def msgmsd(
 
     # Kernel
     if kernel is None:
-        kernel = prewitt_kernel()
-        kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
-        kernel = kernel.to(x.device)
+        kernel = gradient_kernel(prewitt_kernel(), device=x.device)
 
     # Weights
     if weights is None:
@@ -253,8 +264,7 @@ class GMSD(nn.Module):
         super().__init__()
 
         if kernel is None:
-            kernel = prewitt_kernel()
-            kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
+            kernel = gradient_kernel(prewitt_kernel())
 
         self.register_buffer('kernel', kernel)
         self.register_buffer('l_weights', _L_WEIGHTS.view(1, 3, 1, 1))
@@ -323,8 +333,7 @@ class MSGMSD(nn.Module):
         super().__init__()
 
         if kernel is None:
-            kernel = prewitt_kernel()
-            kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
+            kernel = gradient_kernel(prewitt_kernel())
 
         if weights is None:
             weights = _MS_WEIGHTS

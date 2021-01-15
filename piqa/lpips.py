@@ -18,7 +18,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.hub as hub
 
-from piqa.utils import build_reduce, normalize_tensor, Intermediary
+from piqa.utils import _jit, build_reduce, normalize_tensor, Intermediary
 
 from typing import Dict
 
@@ -57,7 +57,7 @@ def get_weights(
 
     # Format keys
     weights = {
-        k.replace('lin', '').replace('.model', ''): v
+        k.replace('lin', '').replace('.model', ''): v.view(1, -1)
         for (k, v) in weights.items()
     }
 
@@ -100,7 +100,7 @@ class LPIPS(nn.Module):
         self,
         network: str = 'alex',
         scaling: bool = True,
-        dropout: bool = True,
+        dropout: bool = False,
         pretrained: bool = True,
         eval: bool = True,
         reduction: str = 'mean',
@@ -134,15 +134,15 @@ class LPIPS(nn.Module):
             p.requires_grad = False
 
         # Linear comparators
-        self.lin = nn.ModuleList([
+        self.lins = nn.ModuleList([
             nn.Sequential(
                 nn.Dropout(inplace=True) if dropout else nn.Identity(),
-                nn.Conv2d(c, 1, kernel_size=1, stride=1, padding=0, bias=False),
+                nn.Linear(c, 1, bias=False),
             ) for c in channels
         ])
 
         if pretrained:
-            self.lin.load_state_dict(get_weights(network=network))
+            self.lins.load_state_dict(get_weights(network=network))
 
         if eval:
             self.eval()
@@ -163,12 +163,14 @@ class LPIPS(nn.Module):
 
         residuals = []
 
-        for loss, fx, fy in zip(self.lin, self.net(input), self.net(target)):
-            fx = normalize_tensor(fx, dim=1, norm='L2')
-            fy = normalize_tensor(fy, dim=1, norm='L2')
+        for lin, fx, fy in zip(self.lins, self.net(input), self.net(target)):
+            fx = normalize_tensor(fx, dim=[1], norm='L2')
+            fy = normalize_tensor(fy, dim=[1], norm='L2')
 
-            residuals.append(loss((fx - fy) ** 2).mean(dim=(-1, -2)))
+            mse = ((fx - fy) ** 2).mean(dim=(-1, -2))
 
-        l = torch.cat(residuals, dim=-1).sum(dim=-1)
+            residuals.append(lin(mse).squeeze(1))
+
+        l = torch.stack(residuals, dim=-1).sum(dim=-1)
 
         return self.reduce(l)

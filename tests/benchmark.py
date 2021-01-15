@@ -14,7 +14,7 @@ import numpy as np
 import os
 import pandas as pd
 import sys
-import timeit
+import time
 import torch
 import urllib.request as request
 
@@ -38,6 +38,24 @@ from piqa import (
     gmsd,
     haarpsi,
 )
+
+
+def timeit(f, n: int = 420) -> (float, float):
+    cuda_start = torch.cuda.Event(enable_timing=True)
+    cuda_end = torch.cuda.Event(enable_timing=True)
+
+    start = time.perf_counter()
+    cuda_start.record()
+
+    for _ in range(n):
+        f()
+
+    cuda_end.record()
+    end = time.perf_counter()
+
+    torch.cuda.synchronize()
+
+    return cuda_start.elapsed_time(cuda_end) / 1000, end - start
 
 
 if __name__ == '__main__':
@@ -94,11 +112,11 @@ if __name__ == '__main__':
             'vainf.MSSSIM': vainf.MS_SSIM(data_range=1.),
             'MSSSIM': ssim.MSSSIM(),
         },
-        ('LPIPS', 2): {
-            'piq.LPIPS': piq.LPIPS(),
-            'IQA.LPIPS': IQA.LPIPSvgg(),
-            'LPIPS': lpips.LPIPS(network='vgg')
-        },
+        # ('LPIPS', 2): {
+        #     'piq.LPIPS': piq.LPIPS(),
+        #     'IQA.LPIPS': IQA.LPIPSvgg(),
+        #     'LPIPS': lpips.LPIPS(network='vgg')
+        # },
         ('GMSD', 2): {
             'piq.gmsd': piq.gmsd,
             'gmsd': gmsd.gmsd,
@@ -133,7 +151,8 @@ if __name__ == '__main__':
         data = {
             'method': [],
             'value': [],
-            'time': []
+            'time-sync': [],
+            'time-async': []
         }
 
         for key, method in methods.items():
@@ -160,7 +179,18 @@ if __name__ == '__main__':
                 g = f
 
             data['method'].append(key)
-            data['value'].append(g().item())
-            data['time'].append(timeit.timeit(g, number=42))
+            data['value'].append(float(g()))
 
-        print(pd.DataFrame(data).sort_values(by='time', ignore_index=True))
+            if key.startswith('sk.'):
+                data['time-sync'].append(0.)
+                data['time-async'].append(0.)
+                continue
+
+            _ = timeit(g, n=42)  # activate JIT
+
+            t_sync, t_async = timeit(g)
+
+            data['time-sync'].append(t_sync)
+            data['time-async'].append(t_async)
+
+        print(pd.DataFrame(data).sort_values(by='time-sync', ignore_index=True))

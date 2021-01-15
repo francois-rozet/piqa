@@ -6,9 +6,9 @@
 
 This package is a collection of measures and metrics for image quality assessment in various image processing tasks such as denoising, super-resolution, image interpolation, etc. It relies heavily on [PyTorch](https://github.com/pytorch/pytorch) and takes advantage of its efficiency and automatic differentiation.
 
-It should noted that `piqa` is directly inspired from the [`piq`](https://github.com/photosynthesis-team/piq) project. However, it focuses on the conciseness, readability and understandability of its (sub-)modules, such that anyone can freely and easily reuse and/or adapt them to its needs.
+It should be noted that `piqa` is directly inspired from the [`piq`](https://github.com/photosynthesis-team/piq) project, while focusing on the conciseness, readability and understandability of its (sub-)modules, such that anyone can freely and easily reuse and/or adapt them to its needs.
 
-Nevertheless, conciseness is never at the expense of efficency; `piqa`'s implementations are up to **4 times faster** than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
+However, conciseness should never be at the expense of efficency; `piqa`'s implementations are up to 2 times faster than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
 
 > `piqa` should be pronounced *pika* (like Pikachu ⚡️)
 
@@ -44,8 +44,8 @@ The `piqa` package is divided in several submodules, each of which implements th
 import torch
 from piqa import psnr, ssim
 
-x = torch.rand(3, 3, 256, 256)
-y = torch.rand(3, 3, 256, 256)
+x = torch.rand(3, 3, 256, 256).cuda()
+y = torch.rand(3, 3, 256, 256).cuda()
 
 # PSNR function
 l = psnr.psnr(x, y)

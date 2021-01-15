@@ -9,9 +9,10 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from piqa.utils import build_reduce, tensor_norm
+from piqa.utils import _jit, build_reduce, tensor_norm
 
 
+@_jit
 def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
     r"""Returns the TV of `x`.
 

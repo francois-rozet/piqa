@@ -16,9 +16,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from piqa.utils import (
+    _jit,
     build_reduce,
     prewitt_kernel,
-    filter2d,
+    gradient_kernel,
+    channel_conv,
     tensor_norm,
     cpow,
 )
@@ -65,7 +67,7 @@ def _mdsi(
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
         >>> y = torch.rand(5, 1, 256, 256)
-        >>> kernel = torch.rand(2, 1, 3, 3)
+        >>> kernel = gradient_kernel(prewitt_kernel())
         >>> l = _mdsi(x, y, kernel)
         >>> l.size()
         torch.Size([5])
@@ -78,11 +80,11 @@ def _mdsi(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = tensor_norm(filter2d(x[:, :1], kernel, padding=pad), dim=1)
-    gm_y = tensor_norm(filter2d(y[:, :1], kernel, padding=pad), dim=1)
+    gm_x = tensor_norm(channel_conv(x[:, :1], kernel, padding=pad), dim=[1])
+    gm_y = tensor_norm(channel_conv(y[:, :1], kernel, padding=pad), dim=[1])
     gm_avg = tensor_norm(
-        filter2d((x + y)[:, :1] / 2., kernel, padding=pad),
-        dim=1,
+        channel_conv((x + y)[:, :1] / 2., kernel, padding=pad),
+        dim=[1],
     )
 
     gm_x_sq, gm_y_sq, gm_avg_sq = gm_x ** 2, gm_y ** 2, gm_avg ** 2
@@ -156,9 +158,7 @@ def mdsi(
 
     # Kernel
     if kernel is None:
-        kernel = prewitt_kernel()
-        kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
-        kernel = kernel.to(x.device)
+        kernel = gradient_kernel(prewitt_kernel(), device=x.device)
 
     return _mdsi(x, y, kernel, **kwargs)
 
@@ -199,8 +199,7 @@ class MDSI(nn.Module):
         super().__init__()
 
         if kernel is None:
-            kernel = prewitt_kernel()
-            kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
+            kernel = gradient_kernel(prewitt_kernel())
 
         self.register_buffer('kernel', kernel)
         self.register_buffer('lhm_weights', _LHM_WEIGHTS.view(3, 3, 1, 1))

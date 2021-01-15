@@ -7,8 +7,11 @@ import unittest
 
 sys.path.append(os.path.abspath('..'))
 
+from piqa import utils
+
+utils._jit = lambda f: f
+
 from piqa import (
-    utils,
     tv,
     psnr,
     ssim,

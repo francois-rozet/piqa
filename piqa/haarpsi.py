@@ -21,7 +21,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import build_reduce, haar_kernel, filter2d
+from piqa.utils import (
+    _jit,
+    build_reduce,
+    haar_kernel,
+    gradient_kernel,
+    channel_conv,
+)
 
 _YIQ_WEIGHTS = torch.FloatTensor([
     [0.299, 0.587, 0.114],
@@ -30,6 +36,7 @@ _YIQ_WEIGHTS = torch.FloatTensor([
 ])
 
 
+@_jit
 def _haarpsi(
     x: torch.Tensor,
     y: torch.Tensor,
@@ -64,23 +71,21 @@ def _haarpsi(
     # Y
 
     ## Gradient(s)
-    g_xy = []
+    g_xy: List[Tuple[Tensor, Tensor]] = []
 
     for j in range(1, n_kernels + 1):
-        kernel_size = 2 ** j
-        half_size = kernel_size // 2
+        kernel_size = int(2 ** j)
 
         ### Haar wavelet kernel
-        kernel = haar_kernel(kernel_size)
-        kernel = torch.stack([kernel, kernel.t()]).unsqueeze(1)
-        kernel = kernel.to(x.device)
+        kernel = gradient_kernel(haar_kernel(kernel_size), device=x.device)
 
         ### Haar filter (gradient)
-        pad = (half_size - 1, half_size, half_size - 1, half_size)
-        g_x = filter2d(F.pad(x[:, :1], pad=pad), kernel).abs()
-        g_y = filter2d(F.pad(y[:, :1], pad=pad), kernel).abs()
+        pad = kernel_size // 2
 
-        g_xy.append((g_x, g_y))
+        g_x = channel_conv(x[:, :1], kernel, padding=pad).abs()
+        g_y = channel_conv(y[:, :1], kernel, padding=pad).abs()
+
+        g_xy.append((g_x[..., 1:, 1:], g_y[..., 1:, 1:]))
 
     ## Gradient similarity(ies)
     gs = []
@@ -88,7 +93,7 @@ def _haarpsi(
         gs.append((2. * g_x * g_y + c) / (g_x ** 2 + g_y ** 2 + c))
 
     ## Local similarity(ies)
-    ls = sum(gs) / 2.  # (N, 2, H, W)
+    ls = torch.stack(gs, dim=-1).sum(dim=-1) / 2.  # (N, 2, H, W)
 
     ## Weight(s)
     w = torch.stack(g_xy[-1], dim=-1).max(dim=-1)[0]  # (N, 2, H, W)
@@ -96,15 +101,14 @@ def _haarpsi(
     # IQ
     if x.size(1) == 3:
         ## Mean filter
-        pad = (0, 1, 0, 1)
-        m_x = F.avg_pool2d(F.pad(x[:, 1:], pad=pad), 2, stride=1).abs()
-        m_y = F.avg_pool2d(F.pad(y[:, 1:], pad=pad), 2, stride=1).abs()
+        m_x = F.avg_pool2d(x[:, 1:], 2, stride=1, padding=1).abs()
+        m_y = F.avg_pool2d(y[:, 1:], 2, stride=1, padding=1).abs()
 
         ## Chromatic similarity(ies)
         cs = (2. * m_x * m_y + c) / (m_x ** 2 + m_y ** 2 + c)
 
         ## Local similarity(ies)
-        ls = torch.cat([ls, cs.mean(1, True)], dim=1)  # (N, 3, H, W)
+        ls = torch.cat([ls, cs[..., 1:, 1:].mean(1, True)], dim=1)  # (N, 3, H, W)
 
         ## Weight(s)
         w = torch.cat([w, w.mean(1, True)], dim=1)  # (N, 3, H, W)
