@@ -45,17 +45,18 @@ LENNA = 'https://upload.wikimedia.org/wikipedia/en/7/7d/Lenna_%28test_image%29.p
 
 METRICS = {
     'TV': lambda: (1, {
-        'piq.tv': piq.total_variation,
-        'tv': tv.tv,
-        'piq.TV': piq.TVLoss(),
-        'TV': tv.TV(),
+        'kornia.tv': kornia.total_variation,
+        'piq.tv': lambda x: piq.total_variation(x, norm_type='l1'),
+        'piqa.tv': tv.tv,
+        'piq.TV': piq.TVLoss(norm_type='l1'),
+        'piqa.TV': tv.TV(),
     }),
     'PSNR': lambda: (2, {
         'sk.psnr': sk.peak_signal_noise_ratio,
         'piq.psnr': piq.psnr,
-        'psnr': psnr.psnr,
+        'piqa.psnr': psnr.psnr,
         'kornia.PSNR': kornia.PSNRLoss(max_val=1.),
-        'PSNR': psnr.PSNR(),
+        'piqa.PSNR': psnr.PSNR(),
     }),
     'SSIM': lambda: (2, {
         'sk.ssim': lambda x, y: sk.structural_similarity(
@@ -65,7 +66,6 @@ METRICS = {
             gaussian_weights=True,
         ),
         'piq.ssim': piq.ssim,
-        'ssim': ssim.ssim,
         'kornia.SSIM-halfloss': kornia.SSIM(
             window_size=11,
             reduction='mean',
@@ -73,45 +73,40 @@ METRICS = {
         'piq.SSIM-loss': piq.SSIMLoss(),
         'IQA.SSIM-loss': IQA.SSIM(),
         'vainf.SSIM': vainf.SSIM(data_range=1.),
-        'SSIM': ssim.SSIM(),
+        'piqa.SSIM': ssim.SSIM(),
     }),
     'MS-SSIM': lambda: (2, {
-        'piq.msssim': piq.multi_scale_ssim,
-        'msssim': ssim.msssim,
-        'piq.MSSSIM-loss': piq.MultiScaleSSIMLoss(),
-        'IQA.MSSSIM-loss': IQA.MS_SSIM(),
-        'vainf.MSSSIM': vainf.MS_SSIM(data_range=1.),
-        'MSSSIM': ssim.MSSSIM(),
+        'piq.ms_ssim': piq.multi_scale_ssim,
+        'piq.MS_SSIM-loss': piq.MultiScaleSSIMLoss(),
+        'IQA.MS_SSIM-loss': IQA.MS_SSIM(),
+        'vainf.MS_SSIM': vainf.MS_SSIM(data_range=1.),
+        'piqa.MS_SSIM': ssim.MS_SSIM(),
     }),
     'LPIPS': lambda: (2, {
         'piq.LPIPS': piq.LPIPS(),
         'IQA.LPIPS': IQA.LPIPSvgg(),
-        'LPIPS': lpips.LPIPS(network='vgg')
+        'piqa.LPIPS': lpips.LPIPS(network='vgg')
     }),
     'GMSD': lambda: (2, {
         'piq.gmsd': piq.gmsd,
-        'gmsd': gmsd.gmsd,
         'piq.GMSD': piq.GMSDLoss(),
         'IQA.GMSD': IQA.GMSD(),
-        'GMSD': gmsd.GMSD(),
+        'piqa.GMSD': gmsd.GMSD(),
     }),
     'MS-GMSD': lambda: (2, {
-        'piq.msgmsd': piq.multi_scale_gmsd,
-        'msgmsd': gmsd.msgmsd,
-        'piq.MSGMSD': piq.MultiScaleGMSDLoss(),
-        'MSGMSD': gmsd.MSGMSD(),
+        'piq.ms_gmsd': piq.multi_scale_gmsd,
+        'piq.MS_GMSD': piq.MultiScaleGMSDLoss(),
+        'piqa.MS_GMSD': gmsd.MS_GMSD(),
     }),
     'MDSI': lambda: (2, {
         'piq.mdsi': piq.mdsi,
-        'mdsi': mdsi.mdsi,
         'piq.MDSI-loss': piq.MDSILoss(),
-        'MDSI': mdsi.MDSI(),
+        'piqa.MDSI': mdsi.MDSI(),
     }),
     'HaarPSI': lambda: (2, {
         'piq.haarpsi': piq.haarpsi,
-        'haarpsi': haarpsi.haarpsi,
         'piq.HaarPSI-loss': piq.HaarPSILoss(),
-        'HaarPSI': haarpsi.HaarPSI(),
+        'piqa.HaarPSI': haarpsi.HaarPSI(),
     }),
 }
 

@@ -63,7 +63,7 @@ l.backward()
 |    TV   | [piqa.tv]      | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
 |   PSNR  | [piqa.psnr]    |   /  | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
 |   SSIM  | [piqa.ssim]    | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
-| MS-SSIM | [piqa.ssim]    | 2003 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
+| MS-SSIM | [piqa.ssim]    | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
 |  LPIPS  | [piqa.lpips]   | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
 |   GMSD  | [piqa.gmsd]    | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
 | MS-GMSD | [piqa.gmsd]    | 2017 | [Multi-Scale Gradient Magnitude Similiarity Deviation](https://ieeexplore.ieee.org/document/7952357) |

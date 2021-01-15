@@ -9,20 +9,22 @@ Credits:
     Inspired by [pytorch-msssim](https://github.com/VainF/pytorch-msssim)
 
 References:
-    [1] Multiscale structural similarity for image quality assessment
-    (Wang et al., 2003)
-    https://ieeexplore.ieee.org/abstract/document/1292216/
-
-    [2] Image quality assessment: From error visibility to structural similarity
+    [1] Image quality assessment: From error visibility to structural similarity
     (Wang et al., 2004)
     https://ieeexplore.ieee.org/abstract/document/1284395/
+
+    [2] Multiscale structural similarity for image quality assessment
+    (Wang et al., 2004)
+    https://ieeexplore.ieee.org/abstract/document/1292216/
 """
+
+__pdoc__ = {'_ssim': True, '_ms_ssim': True}
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, build_reduce, gaussian_kernel, channel_sep_conv
+from piqa.utils import _jit, build_reduce, gaussian_kernel, channel_convs
 
 from typing import List, Tuple
 
@@ -30,32 +32,49 @@ _MS_WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
 
 
 @_jit
-def ssim_per_channel(
+def _ssim(
     x: torch.Tensor,
     y: torch.Tensor,
-    window: List[torch.Tensor],
+    kernel: torch.Tensor,
     value_range: float = 1.,
     non_negative: bool = False,
     k1: float = 0.01,
     k2: float = 0.03,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    r"""Returns the SSIM and the contrast sensitivity per channel
-    between `x` and `y`.
+    r"""Returns the channel-wise SSIM and Contrast Sensitivity (CS)
+    between \(x\) and \(y\).
+
+    $$ \text{SSIM}(x, y) =
+        \frac{2 \mu_x \mu_y + C_1}{\mu^2_x + \mu^2_y + C_1} \text{CS}(x, y) $$
+
+    $$ \text{CS}(x, y) =
+        \frac{2 \sigma_{xy} + C_2}{\sigma^2_x + \sigma^2_y + C_2} $$
+
+    where \(\mu_x\), \(\mu_y\), \(\sigma^2_x\), \(\sigma^2_y\) and
+    \(\sigma_{xy}\) are the results of a smoothing convolution over
+    \(x\), \(y\), \((x - \mu_x)^2\), \((y - \mu_y)^2\) and
+    \((x - \mu_x)(y - \mu_y)\), respectively.
+
+    In practice, SSIM and CS are averaged over the image width and height.
 
     Args:
-        x: An input tensor, (N, C, H, W).
-        y: A target tensor, (N, C, H, W).
-        window: A separated kernel, [(C, 1, K, 1), (C, 1, 1, K)].
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, C, H, W)\).
+        y: A target tensor, \((N, C, H, W)\).
+        kernel: A smoothing kernel, \((C, 1, K)\).
+            E.g. `piqa.utils.gaussian_kernel`.
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
         non_negative: Whether negative values are clipped or not.
 
-        For the remaining arguments, refer to [2].
+        For the remaining arguments, refer to [1].
+
+    Returns:
+        The channel-wise SSIM and CS tensors, both \((N, C)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> window = gaussian_kernel(7, n_channels=3)
-        >>> ss, cs = ssim_per_channel(x, y, window)
+        >>> kernel = gaussian_kernel(7).repeat(3, 1, 1)
+        >>> ss, cs = _ssim(x, y, kernel)
         >>> ss.size(), cs.size()
         (torch.Size([5, 3]), torch.Size([5, 3]))
     """
@@ -63,23 +82,25 @@ def ssim_per_channel(
     c1 = (k1 * value_range) ** 2
     c2 = (k2 * value_range) ** 2
 
+    window = [kernel.unsqueeze(-1), kernel.unsqueeze(-2)]
+
     # Mean (mu)
-    mu_x = channel_sep_conv(x, window)
-    mu_y = channel_sep_conv(y, window)
+    mu_x = channel_convs(x, window)
+    mu_y = channel_convs(y, window)
 
     mu_xx = mu_x ** 2
     mu_yy = mu_y ** 2
     mu_xy = mu_x * mu_y
 
     # Variance (sigma)
-    sigma_xx = channel_sep_conv(x ** 2, window) - mu_xx
-    sigma_yy = channel_sep_conv(y ** 2, window) - mu_yy
-    sigma_xy = channel_sep_conv(x * y, window) - mu_xy
+    sigma_xx = channel_convs(x ** 2, window) - mu_xx
+    sigma_yy = channel_convs(y ** 2, window) - mu_yy
+    sigma_xy = channel_convs(x * y, window) - mu_xy
 
-    # Contrast sensitivity
+    # Contrast sensitivity (CS)
     cs = (2. * sigma_xy + c2) / (sigma_xx + sigma_yy + c2)
 
-    # Structural similarity
+    # Structural similarity (SSIM)
     ss = (2. * mu_xy + c1) / (mu_xx + mu_yy + c1) * cs
 
     # Average
@@ -91,66 +112,44 @@ def ssim_per_channel(
     return ss, cs
 
 
-def ssim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    window_size: int = 11,
-    sigma: float = 1.5,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the SSIM between `x` and `y`.
-
-    Args:
-        x: An input tensor, (N, C, H, W).
-        y: A target tensor, (N, C, H, W).
-        window_size: The size of the window.
-        sigma: The standard deviation of the window.
-
-        `**kwargs` are transmitted to `ssim_per_channel`.
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = ssim(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    window = gaussian_kernel(
-        window_size, sigma,
-        n_channels=x.size(1), device=x.device,
-    )
-
-    return ssim_per_channel(x, y, window, **kwargs)[0].mean(-1)
-
-
 @_jit
-def msssim_per_channel(
+def _ms_ssim(
     x: torch.Tensor,
     y: torch.Tensor,
-    window: List[torch.Tensor],
+    kernel: torch.Tensor,
     weights: torch.Tensor,
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
 ) -> torch.Tensor:
-    """Returns the MS-SSIM per channel between `x` and `y`.
+    r"""Returns the channel-wise MS-SSIM between \(x\) and \(y\).
+
+    $$ \text{MS-SSIM}(x, y) =
+        \text{SSIM}(x^M, y^M)^{\gamma_M} \prod^{M - 1}_{i = 1}
+        \text{CS}(x^i, y^i)^{\gamma_i} $$
+
+    where \(x^i\) and \(y^i\) are obtained by downsampling
+    the original tensors by a factor \(2^{i - 1}\).
 
     Args:
-        x: An input tensor, (N, C, H, W).
-        y: A target tensor, (N, C, H, W).
-        window: A separated kernel, [(C, 1, K, 1), (C, 1, 1, K)].
-        weights: The weights of the scales, (M,).
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, C, H, W)\).
+        y: A target tensor, \((N, C, H, W)\).
+        kernel: A smoothing kernel, \((C, 1, K)\).
+            E.g. `piqa.utils.gaussian_kernel`.
+        weights: The weights \(\gamma_i\) of the scales, \((M,)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [2].
+
+    Returns:
+        The channel-wise MS-SSIM tensor, \((N, C)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> window = gaussian_kernel(7, n_channels=3)
+        >>> kernel = gaussian_kernel(7).repeat(3, 1, 1)
         >>> weights = torch.rand(5)
-        >>> l = msssim_per_channel(x, y, window, weights)
+        >>> l = _ms_ssim(x, y, kernel, weights)
         >>> l.size()
         torch.Size([5, 3])
     """
@@ -163,8 +162,8 @@ def msssim_per_channel(
             x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
             y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
 
-        ss, cs = ssim_per_channel(
-            x, y, window,
+        ss, cs = _ssim(
+            x, y, kernel,
             value_range=value_range,
             non_negative=True,
             k1=k1, k2=k2,
@@ -178,43 +177,62 @@ def msssim_per_channel(
     return msss
 
 
-def msssim(
+def ssim(
     x: torch.Tensor,
     y: torch.Tensor,
-    window_size: int = 11,
-    sigma: float = 1.5,
-    weights: torch.Tensor = None,
     **kwargs,
 ) -> torch.Tensor:
-    r"""Returns the MS-SSIM between `x` and `y`.
+    r"""Returns the SSIM between \(x\) and \(y\).
 
     Args:
-        x: An input tensor, (N, C, H, W).
-        y: A target tensor, (N, C, H, W).
-        window_size: The size of the window.
-        sigma: The standard deviation of the window.
-        weights: The weights of the scales, (M,).
-            If `None`, use the official weights instead.
+        x: An input tensor, \((N, C, H, W)\).
+        y: A target tensor, \((N, C, H, W)\).
 
-        `**kwargs` are transmitted to `msssim_per_channel`.
+        `**kwargs` are transmitted to `SSIM`.
+
+    Returns:
+        The SSIM vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = msssim(x, y)
+        >>> l = ssim(x, y)
         >>> l.size()
         torch.Size([5])
     """
 
-    window = gaussian_kernel(
-        window_size, sigma,
-        n_channels=x.size(1), device=x.device,
-    )
+    kwargs['reduction'] = 'none'
 
-    if weights is None:
-        weights = _MS_WEIGHTS.to(x.device)
+    return SSIM(**kwargs).to(x.device)(x, y)
 
-    return msssim_per_channel(x, y, window, weights, **kwargs).mean(-1)
+
+def ms_ssim(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    **kwargs,
+) -> torch.Tensor:
+    r"""Returns the MS-SSIM between \(x\) and \(y\).
+
+    Args:
+        x: An input tensor, \((N, C, H, W)\).
+        y: A target tensor, \((N, C, H, W)\).
+
+        `**kwargs` are transmitted to `MS_SSIM`.
+
+    Returns:
+        The MS-SSIM vector, \((N,)\).
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = ms_ssim(x, y)
+        >>> l.size()
+        torch.Size([5])
+    """
+
+    kwargs['reduction'] = 'none'
+
+    return MS_SSIM(**kwargs).to(x.device)(x, y)
 
 
 class SSIM(nn.Module):
@@ -224,16 +242,16 @@ class SSIM(nn.Module):
     Args:
         window_size: The size of the window.
         sigma: The standard deviation of the window.
-        n_channels: The number of channels.
+        n_channels: The number of channels \(C\).
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `ssim_per_channel`.
+        `**kwargs` are transmitted to `_ssim`.
 
-    Shape:
-        * Input: (N, C, H, W)
-        * Target: (N, C, H, W), same shape as the input
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, C, H, W)\)
+        * Target: \((N, C, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
         >>> criterion = SSIM().cuda()
@@ -255,17 +273,12 @@ class SSIM(nn.Module):
         r""""""
         super().__init__()
 
-        window = gaussian_kernel(window_size, sigma, n_channels=n_channels)
+        kernel = gaussian_kernel(window_size, sigma)
 
-        for i, w in enumerate(window):
-            self.register_buffer(f'window{i}', w)
+        self.register_buffer('kernel', kernel.repeat(n_channels, 1, 1))
 
         self.reduce = build_reduce(reduction)
         self.kwargs = kwargs
-
-    @property
-    def window(self) -> List[torch.Tensor]:
-        return [self.window0, self.window1]
 
     def forward(
         self,
@@ -275,38 +288,38 @@ class SSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        l = ssim_per_channel(
+        l = _ssim(
             input,
             target,
-            window=self.window,
+            kernel=self.kernel,
             **self.kwargs,
         )[0].mean(-1)
 
         return self.reduce(l)
 
 
-class MSSSIM(nn.Module):
+class MS_SSIM(nn.Module):
     r"""Creates a criterion that measures the MS-SSIM
     between an input and a target.
 
     Args:
         window_size: The size of the window.
         sigma: The standard deviation of the window.
-        n_channels: The number of channels.
-        weights: The weights of the scales, (M,).
+        n_channels: The number of channels \(C\).
+        weights: The weights of the scales, \((M,)\).
             If `None`, use the official weights instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `msssim_per_channel`.
+        `**kwargs` are transmitted to `_ms_ssim`.
 
-    Shape:
-        * Input: (N, C, H, W)
-        * Target: (N, C, H, W), same shape as the input
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, C, H, W)\)
+        * Target: \((N, C, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
-        >>> criterion = MSSSIM().cuda()
+        >>> criterion = MS_SSIM().cuda()
         >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
@@ -327,10 +340,9 @@ class MSSSIM(nn.Module):
         r""""""
         super().__init__()
 
-        window = gaussian_kernel(window_size, sigma, n_channels=n_channels)
+        kernel = gaussian_kernel(window_size, sigma)
 
-        for i, w in enumerate(window):
-            self.register_buffer(f'window{i}', w)
+        self.register_buffer('kernel', kernel.repeat(n_channels, 1, 1))
 
         if weights is None:
             weights = _MS_WEIGHTS
@@ -340,10 +352,6 @@ class MSSSIM(nn.Module):
         self.reduce = build_reduce(reduction)
         self.kwargs = kwargs
 
-    @property
-    def window(self) -> List[torch.Tensor]:
-        return [self.window0, self.window1]
-
     def forward(
         self,
         input: torch.Tensor,
@@ -352,10 +360,10 @@ class MSSSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        l = msssim_per_channel(
+        l = _ms_ssim(
             input,
             target,
-            window=self.window,
+            kernel=self.kernel,
             weights=self.weights,
             **self.kwargs,
         ).mean(-1)

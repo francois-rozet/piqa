@@ -15,19 +15,49 @@ from typing import List
 
 
 @_jit
+def mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    r"""Returns the Mean Squared Error (MSE) between \(x\) and \(y\).
+
+    $$ \text{MSE}(x, y) = \frac{1}{\text{size}(x)} \sum_i (x_i - y_i)^2 $$
+
+    Args:
+        x: An input tensor, \((N, *)\).
+        y: A target tensor, \((N, *)\).
+
+    Returns:
+        The MSE vector, \((N,)\).
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = mse(x, y)
+        >>> l.size()
+        torch.Size([5])
+    """
+
+    return ((x - y) ** 2).view(x.size(0), -1).mean(-1)
+
+
+@_jit
 def psnr(
     x: torch.Tensor,
     y: torch.Tensor,
     value_range: float = 1.,
     epsilon: float = 1e-8,
 ) -> torch.Tensor:
-    r"""Returns the PSNR between `x` and `y`.
+    r"""Returns the PSNR between \(x\) and \(y\).
+
+    $$ \text{PSNR}(x, y) =
+        10 \log_{10} \left( \frac{L^2}{\text{MSE}(x, y)} \right) $$
 
     Args:
-        x: An input tensor, (N, C, *).
-        y: A target tensor, (N, C, *).
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, *)\).
+        y: A target tensor, \((N, *)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
         epsilon: A numerical stability term.
+
+    Returns:
+        The PSNR vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -37,8 +67,7 @@ def psnr(
         torch.Size([5])
     """
 
-    mse = ((x - y) ** 2).flatten(1).mean(dim=1) + epsilon
-    return 10 * torch.log10(value_range ** 2 / mse)
+    return 10 * torch.log10(value_range ** 2 / (mse(x, y) + epsilon))
 
 
 class PSNR(nn.Module):
@@ -51,10 +80,10 @@ class PSNR(nn.Module):
 
         `**kwargs` are transmitted to `psnr`.
 
-    Shape:
-        * Input: (N, C, *), where * means any number of additional dimensions
-        * Target: (N, C, *), same shape as the input
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, *)\)
+        * Target: \((N, *)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
         >>> criterion = PSNR()

@@ -15,7 +15,7 @@ References:
     https://ieeexplore.ieee.org/document/7952357
 """
 
-__pdoc__ = {'_gmsd': True, '_msgmsd': True}
+__pdoc__ = {'_gmsd': True, '_ms_gmsd': True}
 
 import torch
 import torch.nn as nn
@@ -30,7 +30,7 @@ from piqa.utils import (
     tensor_norm,
 )
 
-_L_WEIGHTS = torch.FloatTensor([0.299, 0.587, 0.114])
+_Y_WEIGHTS = torch.FloatTensor([0.299, 0.587, 0.114])
 _MS_WEIGHTS = torch.FloatTensor([0.096, 0.596, 0.289, 0.019])
 
 
@@ -43,18 +43,30 @@ def _gmsd(
     c: float = 0.00261,  # 170. / (255. ** 2)
     alpha: float = 0.,
 ) -> torch.Tensor:
-    r"""Returns the GMSD between `x` and `y`,
-    without downsampling and color space conversion.
+    r"""Returns the GMSD between \(x\) and \(y\),
+    without color space conversion and downsampling.
 
-    `_gmsd` is an auxiliary function for `gmsd` and `GMSD`.
+    \(\text{GMSD}(x, y)\) is the standard deviation of the Gradient
+    Magnitude Similarity (GMS).
+
+    $$ \text{GMS}(x, y) = \frac{(2 - \alpha) \text{GM}(x) \text{GM}(y)
+        + C}{\text{GM}(x)^2 + \text{GM}(y)^2 - \alpha \text{GM}(x)
+        \text{GM}(y) + C} $$
+
+    $$ \text{GM}(z) = \left\| \nabla z \right\|_2 $$
+
+    where \(\nabla z\) is the result of a gradient convolution over \(z\).
 
     Args:
-        x: An input tensor, (N, 1, H, W).
-        y: A target tensor, (N, 1, H, W).
-        kernel: A 2D gradient kernel, (2, 1, K, K).
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
+
+    Returns:
+        The GMSD vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
@@ -90,49 +102,8 @@ def _gmsd(
     return gmsd
 
 
-def gmsd(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    kernel: torch.Tensor = None,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the GMSD between `x` and `y`.
-
-    Args:
-        x: An input tensor, (N, 3, H, W).
-        y: A target tensor, (N, 3, H, W).
-        kernel: A 2D gradient kernel, (2, 1, K, K).
-            If `None`, use the Prewitt kernel instead.
-
-        `**kwargs` are transmitted to `_gmsd`.
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = gmsd(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    # Downsample
-    x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
-    y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
-
-    # RGB to luminance
-    l_weights = _L_WEIGHTS.to(x.device).view(1, 3, 1, 1)
-
-    x = F.conv2d(x, l_weights)
-    y = F.conv2d(y, l_weights)
-
-    # Kernel
-    if kernel is None:
-        kernel = gradient_kernel(prewitt_kernel(), device=x.device)
-
-    return _gmsd(x, y, kernel, **kwargs)
-
-
 @_jit
-def _msgmsd(
+def _ms_gmsd(
     x: torch.Tensor,
     y: torch.Tensor,
     kernel: torch.Tensor,
@@ -141,26 +112,33 @@ def _msgmsd(
     c: float = 0.00261,
     alpha: float = 0.5,
 ) -> torch.Tensor:
-    r"""Returns the MS-GMSD between `x` and `y`,
+    r"""Returns the MS-GMSD between \(x\) and \(y\),
     without color space conversion.
 
-    `_msgmsd` is an auxiliary function for `msgmsd` and `MSGMSD`.
+    $$ \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1}
+        w_i \text{GMSD}(x^i, y^i) $$
+
+    where \(x^i\) and \(y^i\) are obtained by downsampling
+    the original tensors by a factor \(2^{i - 1}\).
 
     Args:
-        x: An input tensor, (N, 1, H, W).
-        y: A target tensor, (N, 1, H, W).
-        kernel: A 2D gradient kernel, (2, 1, K, K).
-        weights: The weights of the scales, (M,).
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        weights: The weights \(w_i\) of the scales, \((M,)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [2].
+
+    Returns:
+        The MS-GMSD vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
         >>> y = torch.rand(5, 1, 256, 256)
         >>> kernel = gradient_kernel(prewitt_kernel())
         >>> weights = torch.rand(4)
-        >>> l = _msgmsd(x, y, kernel, weights)
+        >>> l = _ms_gmsd(x, y, kernel, weights)
         >>> l.size()
         torch.Size([5])
     """
@@ -184,66 +162,83 @@ def _msgmsd(
     return msgmsd
 
 
-def msgmsd(
+def gmsd(
     x: torch.Tensor,
     y: torch.Tensor,
-    kernel: torch.Tensor = None,
-    weights: torch.Tensor = None,
     **kwargs,
 ) -> torch.Tensor:
-    r"""Returns the MS-GMSD between `x` and `y`.
+    r"""Returns the GMSD between \(x\) and \(y\).
 
     Args:
-        x: An input tensor, (N, 3, H, W).
-        y: A target tensor, (N, 3, H, W).
-        kernel: A 2D gradient kernel, (2, 1, K, K).
-            If `None`, use the Prewitt kernel instead.
-        weights: The weights of the scales, (M,).
-            If `None`, use the official weights instead.
+        x: An input tensor, \((N, 3, H, W)\).
+        y: A target tensor, \((N, 3, H, W)\).
 
-        `**kwargs` are transmitted to `_msgmsd`.
+        `**kwargs` are transmitted to `GMSD`.
+
+    Returns:
+        The GMSD vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = msgmsd(x, y)
+        >>> l = gmsd(x, y)
         >>> l.size()
         torch.Size([5])
     """
 
-    # RGB to luminance
-    l_weights = _L_WEIGHTS.to(x.device).view(1, 3, 1, 1)
+    kwargs['reduction'] = 'none'
 
-    x = F.conv2d(x, l_weights)
-    y = F.conv2d(y, l_weights)
+    return GMSD(**kwargs).to(x.device)(x, y)
 
-    # Kernel
-    if kernel is None:
-        kernel = gradient_kernel(prewitt_kernel(), device=x.device)
 
-    # Weights
-    if weights is None:
-        weights = _MS_WEIGHTS.to(x.device)
+def ms_gmsd(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    **kwargs,
+) -> torch.Tensor:
+    r"""Returns the MS-GMSD between \(x\) and \(y\).
 
-    return _msgmsd(x, y, kernel, weights, **kwargs)
+    Args:
+        x: An input tensor, \((N, 3, H, W)\).
+        y: A target tensor, \((N, 3, H, W)\).
+
+        `**kwargs` are transmitted to `MS_GMSD`.
+
+    Returns:
+        The MS-GMSD vector, \((N,)\).
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> y = torch.rand(5, 3, 256, 256)
+        >>> l = ms_gmsd(x, y)
+        >>> l.size()
+        torch.Size([5])
+    """
+
+    kwargs['reduction'] = 'none'
+
+    return MS_GMSD(**kwargs).to(x.device)(x, y)
 
 
 class GMSD(nn.Module):
     r"""Creates a criterion that measures the GMSD
     between an input and a target.
 
+    Before applying `_gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space, and downsampled by a factor 2.
+
     Args:
-        kernel: A 2D gradient kernel, (2, 1, K, K).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Prewitt kernel instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `_gmsd`.
 
-    Shape:
-        * Input: (N, 3, H, W)
-        * Target: (N, 3, H, W)
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
         >>> criterion = GMSD().cuda()
@@ -268,7 +263,7 @@ class GMSD(nn.Module):
             kernel = gradient_kernel(prewitt_kernel())
 
         self.register_buffer('kernel', kernel)
-        self.register_buffer('l_weights', _L_WEIGHTS.view(1, 3, 1, 1))
+        self.register_buffer('y_weights', _Y_WEIGHTS.view(1, 3, 1, 1))
 
         self.reduce = build_reduce(reduction)
         self.kwargs = kwargs
@@ -285,9 +280,9 @@ class GMSD(nn.Module):
         input = F.avg_pool2d(input, 2, ceil_mode=True)
         target = F.avg_pool2d(target, 2, ceil_mode=True)
 
-        # RGB to luminance
-        input = F.conv2d(input, self.l_weights)
-        target = F.conv2d(target, self.l_weights)
+        # RGB to Y
+        input = F.conv2d(input, self.y_weights)
+        target = F.conv2d(target, self.y_weights)
 
         # GMSD
         l = _gmsd(input, target, self.kernel, **self.kwargs)
@@ -295,27 +290,30 @@ class GMSD(nn.Module):
         return self.reduce(l)
 
 
-class MSGMSD(nn.Module):
-    r"""Creates a criterion that measures the MSGMSD
+class MS_GMSD(nn.Module):
+    r"""Creates a criterion that measures the MS-GMSD
     between an input and a target.
 
+    Before applying `_ms_gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space.
+
     Args:
-        kernel: A 2D gradient kernel, (2, 1, K, K).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Prewitt kernel instead.
-        weights: The weights of the scales, (M,).
+        weights: The weights of the scales, \((M,)\).
             If `None`, use the official weights instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `_msgmsd`.
+        `**kwargs` are transmitted to `_ms_gmsd`.
 
-    Shape:
-        * Input: (N, 3, H, W)
-        * Target: (N, 3, H, W)
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
-        >>> criterion = MSGMSD().cuda()
+        >>> criterion = MS_GMSD().cuda()
         >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> l = criterion(x, y)
@@ -342,7 +340,7 @@ class MSGMSD(nn.Module):
 
         self.register_buffer('kernel', kernel)
         self.register_buffer('weights', weights)
-        self.register_buffer('l_weights', _L_WEIGHTS.view(1, 3, 1, 1))
+        self.register_buffer('y_weights', _Y_WEIGHTS.view(1, 3, 1, 1))
 
         self.reduce = build_reduce(reduction)
         self.kwargs = kwargs
@@ -355,11 +353,11 @@ class MSGMSD(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        # RGB to luminance
-        input = F.conv2d(input, self.l_weights)
-        target = F.conv2d(target, self.l_weights)
+        # RGB to Y
+        input = F.conv2d(input, self.y_weights)
+        target = F.conv2d(target, self.y_weights)
 
-        # MSGMSD
-        l = _msgmsd(input, target, self.kernel, self.weights, **self.kwargs)
+        # MS-GMSD
+        l = _ms_gmsd(input, target, self.kernel, self.weights, **self.kwargs)
 
         return self.reduce(l)

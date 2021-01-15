@@ -13,13 +13,28 @@ from piqa.utils import _jit, build_reduce, tensor_norm
 
 
 @_jit
-def tv(x: torch.Tensor, norm: str = 'L2') -> torch.Tensor:
-    r"""Returns the TV of `x`.
+def tv(x: torch.Tensor, norm: str = 'L1') -> torch.Tensor:
+    r"""Returns the TV of \(x\).
+
+    With `L1`,
+
+    $$ \text{TV}(x) = \sum_{i, j}
+        \left| x_{i+1, j} - x_{i, j} \right| +
+        \left| x_{i, j+1} - x_{i, j} \right| $$
+
+    Alternatively, with `L2`,
+
+    $$ \text{TV}(x) = \left( \sum_{c, i, j}
+        (x_{c, i+1, j} - x_{c, i, j})^2 + (x_{c, i, j+1} - x_{c, i, j})^2
+        \right)^{\frac{1}{2}} $$
 
     Args:
-        x: An input tensor, (*, C, H, W).
+        x: An input tensor, \((N, C, H, W)\).
         norm: Specifies the norm funcion to apply:
             `'L1'` | `'L2'` | `'L2_squared'`.
+
+    Returns:
+        The TV vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -55,9 +70,9 @@ class TV(nn.Module):
 
         `**kwargs` are transmitted to `tv`.
 
-    Shape:
-        * Input: (N, C, H, W)
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, C, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
         >>> criterion = TV()

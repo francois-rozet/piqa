@@ -57,7 +57,7 @@ def get_weights(
 
     # Format keys
     weights = {
-        k.replace('lin', '').replace('.model', ''): v.view(1, -1)
+        k.replace('lin', '').replace('.model', ''): v
         for (k, v) in weights.items()
     }
 
@@ -66,23 +66,29 @@ def get_weights(
 
 class LPIPS(nn.Module):
     r"""Creates a criterion that measures the LPIPS
-    between an input and a target.
+    between an input \(x\) and a target \(y\).
+
+    $$ \text{LPIPS}(x, y) = \sum_{l \, \in \, \mathcal{F}}
+        w_l \cdot \text{MSE}(\hat{\phi}_l(x), \hat{\phi}_l(y)) $$
+
+    where \(\hat{\phi}_l\) represents the normalized output of an
+    intermediate layer \(l\) in a perception network \(\mathcal{F}\).
 
     Args:
-        network: Specifies the perception network to use:
+        network: Specifies the perception network \(\mathcal{F}\) to use:
             `'alex'` | `'squeeze'` | `'vgg'`.
         scaling: Whether the input and target need to
             be scaled w.r.t. ImageNet.
         dropout: Whether dropout is used or not.
-        pretrained: Whether the official pretrained weights are used or not.
+        pretrained: Whether the official weights \(w_l\) are used or not.
         eval: Whether to initialize the object in evaluation mode or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-    Shape:
-        * Input: (N, 3, H, W)
-        * Target: (N, 3, H, W)
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Note:
         `LPIPS` is a *trainable* metric.
@@ -138,7 +144,7 @@ class LPIPS(nn.Module):
         self.lins = nn.ModuleList([
             nn.Sequential(
                 nn.Dropout(inplace=True) if dropout else nn.Identity(),
-                nn.Linear(c, 1, bias=False),
+                nn.Conv2d(c, 1, kernel_size=1, bias=False),
             ) for c in channels
         ])
 
@@ -168,9 +174,8 @@ class LPIPS(nn.Module):
             fx = normalize_tensor(fx, dim=[1], norm='L2')
             fy = normalize_tensor(fy, dim=[1], norm='L2')
 
-            mse = ((fx - fy) ** 2).mean(dim=(-1, -2))
-
-            residuals.append(lin(mse).squeeze(1))
+            mse = ((fx - fy) ** 2).mean(dim=(-1, -2), keepdim=True)
+            residuals.append(lin(mse).flatten())
 
         l = torch.stack(residuals, dim=-1).sum(dim=-1)
 

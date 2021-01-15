@@ -16,11 +16,11 @@ def channel_conv(
     kernel: torch.Tensor,
     padding: int = 0,  # Union[int, Tuple[int, ...]]
 ) -> torch.Tensor:
-    r"""Returns the channel-wise convolution of `x` with respect to `kernel`.
+    r"""Returns the channel-wise convolution of \(x\) with the kernel `kernel`.
 
     Args:
-        x: An input tensor, (N, C, *).
-        kernel: A kernel, (C', 1, *).
+        x: A tensor, \((N, C, *)\).
+        kernel: A kernel, \((C', 1, *)\).
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
@@ -41,17 +41,17 @@ def channel_conv(
     return F.conv1d(x, kernel, padding=padding, groups=x.size(1))
 
 
-def channel_sep_conv(
+def channel_convs(
     x: torch.Tensor,
-    kernel: List[torch.Tensor],
+    kernels: List[torch.Tensor],
     padding: int = 0,  # Union[int, Tuple[int, ...]]
 ) -> torch.Tensor:
-    r"""Returns the channel-wise convolution of `x` with respect to the
-    separated `kernel`.
+    r"""Returns the channel-wise convolution of \(x\) with
+    the series of kernel `kernels`.
 
     Args:
-        x: An input tensor, (N, C, *).
-        kernel: A separated kernel, (C', 1, *).
+        x: A tensor, \((N, C, *)\).
+        kernels: A list of kernels, each \((C', 1, *)\).
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
@@ -62,18 +62,18 @@ def channel_sep_conv(
                   [10., 11., 12., 13., 14.],
                   [15., 16., 17., 18., 19.],
                   [20., 21., 22., 23., 24.]]]])
-        >>> kernel = [torch.ones((1, 1, 3, 1)), torch.ones((1, 1, 1, 3))]
-        >>> channel_sep_conv(x, kernel)
+        >>> kernels = [torch.ones((1, 1, 3, 1)), torch.ones((1, 1, 1, 3))]
+        >>> channel_convs(x, kernels)
         tensor([[[[ 54.,  63.,  72.],
                   [ 99., 108., 117.],
                   [144., 153., 162.]]]])
     """
 
     if padding > 0:
-        pad = (padding,) * (2 * len(kernel))
+        pad = (padding,) * (2 * x.dim() - 4)
         x = F.pad(x, pad=pad)
 
-    for k in kernel:
+    for k in kernels:
         x = channel_conv(x, k)
 
     return x
@@ -81,21 +81,21 @@ def channel_sep_conv(
 
 def unravel_index(
     indices: torch.LongTensor,
-    shape: Tuple[int, ...],
+    shape: List[int],
 ) -> torch.LongTensor:
     r"""Converts flat indices into unraveled coordinates in a target shape.
 
     This is a `torch` implementation of `numpy.unravel_index`.
 
     Args:
-        indices: A tensor of (flat) indices, (*, N).
-        shape: The targeted shape, (D,).
+        indices: A tensor of (flat) indices, \((*, N)\).
+        shape: The targeted shape, \((D,)\).
 
     Returns:
-        coord: The unraveled coordinates, (*, N, D).
+        The unraveled coordinates, \((*, N, D)\).
 
     Example:
-        >>> unravel_index(torch.arange(9), (3, 3))
+        >>> unravel_index(torch.arange(9), shape=(3, 3))
         tensor([[0, 0],
                 [0, 1],
                 [0, 2],
@@ -120,57 +120,53 @@ def unravel_index(
 
 def gaussian_kernel(
     size: int,
-    sigma: float = 1.,
-    n: int = 2,
-    n_channels: int = 1,
-    device: torch.device = torch.device('cpu'),
-) -> List[torch.Tensor]:
-    r"""Returns the `n`-dimensional separated Gaussian kernel of size `size`.
+    sigma: float = 1.
+) -> torch.Tensor:
+    r"""Returns the 1-dimensional Gaussian kernel of size \(K\).
 
-    The distribution is centered around the kernel's center
-    and the standard deviation is `sigma`.
+    $$ G(x) = \frac{1}{\sum_{y = 1}^{K} G(y)} \exp
+        \left(\frac{(x - \mu)^2}{2 \sigma^2}\right) $$
+
+    where \(x \in [1; K]\) is a position in the kernel
+    and \(\mu = \frac{1 + K}{2}\).
 
     Args:
-        size: The size of the kernel.
-        sigma: The standard deviation of the distribution.
-        n: The number of dimensions.
-        n_channels: The number of channels.
-        device: Specifies the return device.
+        size: The kernel size \(K\).
+        sigma: The standard deviation \(\sigma\) of the distribution.
+
+    Returns:
+        The kernel vector, \((K,)\).
+
+    Note:
+        An \(N\)-dimensional Gaussian kernel is separable, meaning that
+        applying it is equivalent to applying a series of \(N\) 1-dimensional
+        Gaussian kernels, which has a lower computational complexity.
 
     Wikipedia:
-        https://en.wikipedia.org/wiki/Normal_distribution
+        https://en.wikipedia.org/wiki/Gaussian_blur
 
     Example:
-        >>> k = gaussian_kernel(5, sigma=1.5)
-        >>> k[0].size(), k[1].size()
-        (torch.Size([1, 1, 5, 1]), torch.Size([1, 1, 1, 5]))
-        >>> k[0].squeeze()
-        tensor([0.1201, 0.2339, 0.2921, 0.2339, 0.1201])
-        >>> k[1].squeeze()
+        >>> gaussian_kernel(5, sigma=1.5)
         tensor([0.1201, 0.2339, 0.2921, 0.2339, 0.1201])
     """
 
-    kernel = torch.arange(size, dtype=torch.float, device=device)
+    kernel = torch.arange(size, dtype=torch.float)
     kernel -= (size - 1) / 2
     kernel = kernel ** 2 / (2. * sigma ** 2)
     kernel = torch.exp(-kernel)
     kernel /= kernel.sum()
 
-    kernels = []
-    for i in range(n):
-        shape = (n_channels, 1) + (1,) * i + (-1,) + (1,) * (n - i - 1)
-        kernels.append(
-            kernel.repeat(n_channels, 1).view(shape)
-        )
-
-    return kernels
+    return kernel
 
 
 def haar_kernel(size: int) -> torch.Tensor:
     r"""Returns the horizontal Haar kernel.
 
     Args:
-        size: The kernel (even) size.
+        size: The kernel (even) size \(K\).
+
+    Returns:
+        The kernel, \((K, K)\).
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Haar_wavelet
@@ -188,7 +184,10 @@ def haar_kernel(size: int) -> torch.Tensor:
 
 
 def prewitt_kernel() -> torch.Tensor:
-    r"""Returns the horizontal 3x3 Prewitt kernel.
+    r"""Returns the Prewitt kernel.
+
+    Returns:
+        The kernel, \((3, 3)\).
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Prewitt_operator
@@ -207,7 +206,10 @@ def prewitt_kernel() -> torch.Tensor:
 
 
 def sobel_kernel() -> torch.Tensor:
-    r"""Returns the horizontal 3x3 Sobel kernel.
+    r"""Returns the Sobel kernel.
+
+    Returns:
+        The kernel, \((3, 3)\).
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Sobel_operator
@@ -226,7 +228,10 @@ def sobel_kernel() -> torch.Tensor:
 
 
 def scharr_kernel() -> torch.Tensor:
-    r"""Returns the horizontal 3x3 Scharr kernel.
+    r"""Returns the Scharr kernel.
+
+    Returns:
+        The kernel, \((3, 3)\).
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Scharr_operator
@@ -244,15 +249,14 @@ def scharr_kernel() -> torch.Tensor:
     )
 
 
-def gradient_kernel(
-    kernel: torch.Tensor,
-    device: torch.device = torch.device('cpu'),
-) -> torch.Tensor:
+def gradient_kernel(kernel: torch.Tensor) -> torch.Tensor:
     r"""Returns `kernel` transformed into a gradient.
 
     Args:
-        kernel: A convolution kernel, (K, K).
-        device: Specifies the return device.
+        kernel: A convolution kernel, \((K, K)\).
+
+    Returns:
+        The gradient kernel, \((2, 1, K, K)\).
 
     Example:
         >>> g = gradient_kernel(prewitt_kernel())
@@ -260,7 +264,7 @@ def gradient_kernel(
         torch.Size([2, 1, 3, 3])
     """
 
-    return torch.stack([kernel, kernel.t()]).unsqueeze(1).to(device)
+    return torch.stack([kernel, kernel.t()]).unsqueeze(1)
 
 
 def tensor_norm(
@@ -269,10 +273,14 @@ def tensor_norm(
     keepdim: bool = False,
     norm: str = 'L2',
 ) -> torch.Tensor:
-    r"""Returns the norm of `x`.
+    r"""Returns the norm of \(x\).
+
+    $$ L_1(x) = \left\| x \right\|_1 = \sum_i \left| x_i \right| $$
+
+    $$ L_2(x) = \left\| x \right\|_2 = \left( \sum_i x^2_i \right)^\frac{1}{2} $$
 
     Args:
-        x: An input tensor.
+        x: A tensor, \((*,)\).
         dim: The dimension(s) along which to calculate the norm.
         keepdim: Whether the output tensor has `dim` retained or not.
         norm: Specifies the norm funcion to apply:
@@ -310,14 +318,19 @@ def normalize_tensor(
     norm: str = 'L2',
     epsilon: float = 1e-8,
 ) -> torch.Tensor:
-    r"""Returns `x` normalized.
+    r"""Returns \(x\) normalized.
+
+    $$ \hat{x} = \frac{x}{\left\|x\right\|} $$
 
     Args:
-        x: An input tensor.
+        x: A tensor, \((*,)\).
         dim: The dimension(s) along which to normalize.
         norm: Specifies the norm funcion to use:
             `'L1'` | `'L2'` | `'L2_squared'`.
         epsilon: A numerical stability term.
+
+    Returns:
+        The normalized tensor, \((*,)\).
 
     Example:
         >>> x = torch.arange(9, dtype=torch.float).view(3, 3)
@@ -337,12 +350,17 @@ def normalize_tensor(
 
 
 def cstack(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
-    r"""Returns a complex tensor with its real part equal to `real` and
-    its imaginary part equal to `imag`.
+    r"""Returns a complex tensor with its real part equal to \(\Re\) and
+    its imaginary part equal to \(\Im\).
+
+    $$ c = \Re + i \Im $$
 
     Args:
-        real: An input tensor.
-        imag: An input tensor.
+        real: A tensor \(\Re\), \((*,)\).
+        imag: A tensor \(\Im\), \((*,)\).
+
+    Returns:
+        The complex tensor, \((*, 2)\).
 
     Example:
         >>> x = torch.tensor([1., 0.707])
@@ -355,12 +373,64 @@ def cstack(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
     return torch.stack([real, imag], dim=-1)
 
 
-def cprod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    r"""Returns the power of `x` with `exponent`.
+def cabs(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
+    r"""Returns the absolute value (modulus) of \(x\).
+
+    $$ \left| x \right| = \sqrt{ \Re(x)^2 + \Im(x)^2 } $$
 
     Args:
-        x: A complex input tensor, (*, 2).
-        y: A complex input tensor, (*, 2).
+        x: A complex tensor, \((*, 2)\).
+        squared: Whether the output is squared or not.
+
+    Returns:
+        The absolute value tensor, \((*,)\).
+
+    Example:
+        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
+        >>> cabs(x)
+        tensor([1.0000, 0.9998])
+    """
+
+    x = (x ** 2).sum(-1)
+
+    if not squared:
+        x = torch.sqrt(x)
+
+    return x
+
+
+def cangle(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the angle (phase) of \(x\).
+
+    $$ \phi(x) = \operatorname{atan2}(\Im(x), \Re(x)) $$
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The angle tensor, \((*,)\).
+
+    Example:
+        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
+        >>> cangle(x)
+        tensor([0.0000, 0.7854])
+    """
+
+    return torch.atan2(x[..., 1], x[..., 0])
+
+
+def cprod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    r"""Returns the product of \(x\) and \(y\).
+
+    $$ x y = \Re(x) \Re(y) - \Im(x) \Im(y)
+        + i \left( \Re(x) \Im(y) - \Im(x) \Re(y) \right) $$
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+        y: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The product tensor, \((*, 2)\).
 
     Example:
         >>> x = torch.tensor([[1.,  0.], [0.707,  0.707]])
@@ -380,11 +450,16 @@ def cprod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
 
 def cpow(x: torch.Tensor, exponent: float) -> torch.Tensor:
-    r"""Returns the power of `x` with `exponent`.
+    r"""Returns the power of \(x\) with `exponent`.
+
+    $$ x^p = \left| x \right|^p \exp(i \phi(x))^p $$
 
     Args:
-        x: A complex input tensor, (*, 2).
-        exponent: The exponent value or tensor.
+        x: A complex tensor, \((*, 2)\).
+        exponent: The exponent \(p\).
+
+    Returns:
+        The power tensor, \((*, 2)\).
 
     Example:
         >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
@@ -397,42 +472,6 @@ def cpow(x: torch.Tensor, exponent: float) -> torch.Tensor:
     phi = cangle(x) * exponent
 
     return cstack(r * torch.cos(phi), r * torch.sin(phi))
-
-
-def cabs(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
-    r"""Returns the absolute value (modulus) of `x`.
-
-    Args:
-        x: A complex input tensor, (*, 2).
-        squared: Whether the output is squared or not.
-
-    Example:
-        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
-        >>> cabs(x)
-        tensor([1.0000, 0.9998])
-    """
-
-    x = (x ** 2).sum(-1)
-
-    if not squared:
-        x = torch.sqrt(x)
-
-    return x
-
-
-def cangle(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the angle (phase) of `x`.
-
-    Args:
-        x: A complex input tensor, (*, 2).
-
-    Example:
-        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
-        >>> cangle(x)
-        tensor([0.0000, 0.7854])
-    """
-
-    return torch.atan2(x[..., 1], x[..., 0])
 
 
 class Intermediary(nn.Module):

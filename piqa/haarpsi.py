@@ -45,18 +45,19 @@ def _haarpsi(
     c: float = 0.00046,  # 30. / (255. ** 2)
     alpha: float = 4.2,
 ) -> torch.Tensor:
-    r"""Returns the HaarPSI between `x` and `y`,
+    r"""Returns the HaarPSI between \(x\) and \(y\),
     without color space conversion.
 
-    `_haarpsi` is an auxiliary function for `haarpsi` and `HaarPSI`.
-
     Args:
-        x: An input tensor, (N, 3 or 1, H, W).
-        y: A target tensor, (N, 3 or 1, H, W).
-        value_range: The value range of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, 3, H, W)\) or \((N, 1, H, W)\).
+        y: A target tensor, \((N, 3, H, W)\) or \((N, 1, H, W)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
         n_kernels: The number of Haar wavelet kernels to use.
 
         For the remaining arguments, refer to [1].
+
+    Returns:
+        The HaarPSI vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -78,7 +79,7 @@ def _haarpsi(
         kernel_size = int(2 ** j)
 
         ### Haar wavelet kernel
-        kernel = gradient_kernel(haar_kernel(kernel_size), device=x.device)
+        kernel = gradient_kernel(haar_kernel(kernel_size)).to(x.device)
 
         ### Haar filter (gradient)
         pad = kernel_size // 2
@@ -127,17 +128,18 @@ def _haarpsi(
 def haarpsi(
     x: torch.Tensor,
     y: torch.Tensor,
-    chromatic: bool = True,
     **kwargs,
 ) -> torch.Tensor:
-    r"""Returns the HaarPSI between `x` and `y`.
+    r"""Returns the HaarPSI between \(x\) and \(y\).
 
     Args:
-        x: An input tensor, (N, 3, H, W).
-        y: A target tensor, (N, 3, H, W).
-        chromatic: Whether to use the chromatic channels of not.
+        x: An input tensor, \((N, 3, H, W)\).
+        y: A target tensor, \((N, 3, H, W)\).
 
-        `**kwargs` are transmitted to `_haarpsi`.
+        `**kwargs` are transmitted to `HaarPSI`.
+
+    Returns:
+        The HaarPSI vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -147,39 +149,29 @@ def haarpsi(
         torch.Size([5])
     """
 
-    # Downsample
-    x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
-    y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
+    kwargs['reduction'] = 'none'
 
-    # RBG to YIQ
-    if chromatic:
-        yiq_weights = _YIQ_WEIGHTS.view(3, 3, 1, 1)
-    else:
-        yiq_weights = _YIQ_WEIGHTS[:1].view(1, 3, 1, 1)
-
-    yiq_weights = yiq_weights.to(x.device)
-
-    x = F.conv2d(x, yiq_weights)
-    y = F.conv2d(y, yiq_weights)
-
-    return _haarpsi(x, y, **kwargs)
+    return HaarPSI(**kwargs).to(x.device)(x, y)
 
 
 class HaarPSI(nn.Module):
     r"""Creates a criterion that measures the HaarPSI
     between an input and a target.
 
+    Before applying `_haarpsi`, the input and target are converted from
+    RBG to YIQ and downsampled by a factor 2.
+
     Args:
-        chromatic: Whether to use the chromatic channels of not.
+        chromatic: Whether to use the chromatic channels (IQ) or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
         `**kwargs` are transmitted to `_haarpsi`.
 
-    Shape:
-        * Input: (N, 3, H, W)
-        * Target: (N, 3, H, W)
-        * Output: (N,) or (1,) depending on `reduction`
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
         >>> criterion = HaarPSI().cuda()
