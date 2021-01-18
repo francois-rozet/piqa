@@ -105,8 +105,8 @@ def _mdsi(
     gs = gs_x_y + gs_x_avg - gs_y_avg
 
     # Chromaticity similarity
-    cs_num = 2. * (hm_x * hm_y).sum(1) + c3
-    cs_den = (hm_x ** 2 + hm_y ** 2).sum(1) + c3
+    cs_num = 2. * (hm_x * hm_y).sum(dim=1) + c3
+    cs_den = (hm_x ** 2 + hm_y ** 2).sum(dim=1) + c3
     cs = cs_num / cs_den
 
     # Gradient-chromaticity similarity
@@ -120,9 +120,9 @@ def _mdsi(
 
     # Mean deviation similarity
     gcs_q = cpow(gcs, q)
-    gcs_q_avg = gcs_q.mean((-2, -3), True)
+    gcs_q_avg = gcs_q.mean(dim=(-2, -3), keepdim=True)
     score = cabs(gcs_q - gcs_q_avg, squared=True) ** (rho / 2)
-    mds = score.mean((-1, -2)) ** (o / rho)
+    mds = score.mean(dim=(-1, -2)) ** (o / rho)
 
     return mds
 

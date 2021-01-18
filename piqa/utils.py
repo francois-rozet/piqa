@@ -391,7 +391,7 @@ def cabs(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
         tensor([1.0000, 0.9998])
     """
 
-    x = (x ** 2).sum(-1)
+    x = (x ** 2).sum(dim=-1)
 
     if not squared:
         x = torch.sqrt(x)

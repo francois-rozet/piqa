@@ -104,7 +104,7 @@ def _ssim(
     ss = (2. * mu_xy + c1) / (mu_xx + mu_yy + c1) * cs
 
     # Average
-    ss, cs = ss.mean((-1, -2)), cs.mean((-1, -2))
+    ss, cs = ss.flatten(2).mean(dim=-1), cs.flatten(2).mean(dim=-1)
 
     if non_negative:
         ss, cs = torch.relu(ss), torch.relu(cs)
@@ -293,7 +293,7 @@ class SSIM(nn.Module):
             target,
             kernel=self.kernel,
             **self.kwargs,
-        )[0].mean(-1)
+        )[0].mean(dim=-1)
 
         return self.reduce(l)
 
@@ -366,6 +366,6 @@ class MS_SSIM(nn.Module):
             kernel=self.kernel,
             weights=self.weights,
             **self.kwargs,
-        ).mean(-1)
+        ).mean(dim=-1)
 
         return self.reduce(l)

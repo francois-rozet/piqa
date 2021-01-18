@@ -119,7 +119,7 @@ def _haarpsi(
 
     # HaarPSI
     hs = torch.sigmoid(ls * alpha)
-    hpsi = (hs * w).sum((-1, -2, -3)) / w.sum((-1, -2, -3))
+    hpsi = (hs * w).sum(dim=(-1, -2, -3)) / w.sum(dim=(-1, -2, -3))
     hpsi = (torch.logit(hpsi) / alpha) ** 2
 
     return hpsi
