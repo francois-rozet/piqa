@@ -4,13 +4,13 @@
 
 # PyTorch Image Quality Assessment
 
-This package is a collection of measures and metrics for image quality assessment in various image processing tasks such as denoising, super-resolution, image interpolation, etc. It relies heavily on [PyTorch](https://github.com/pytorch/pytorch) and takes advantage of its efficiency and automatic differentiation.
+The `piqa` package is a collection of measures and metrics for image quality assessment in various image processing tasks such as denoising, super-resolution, image interpolation, etc. It relies only on [PyTorch](https://github.com/pytorch/pytorch) and takes advantage of its efficiency and automatic differentiation.
 
-It should be noted that `piqa` is directly inspired from the [`piq`](https://github.com/photosynthesis-team/piq) project, while focusing on the conciseness, readability and understandability of its (sub-)modules, such that anyone can freely and easily reuse and/or adapt them to its needs.
+PIQA is directly inspired from the [`piq`](https://github.com/photosynthesis-team/piq) project, but focuses on the conciseness, readability and understandability of its (sub-)modules, such that anyone can easily reuse and/or adapt them to its needs.
 
-However, conciseness should never be at the expense of efficency; `piqa`'s implementations are up to 2 times faster than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
+However, conciseness should never be at the expense of efficency; PIQA's implementations are up to 3 times faster than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
 
-> `piqa` should be pronounced *pika* (like Pikachu ⚡️)
+> PIQA should be pronounced *pika* (like Pikachu ⚡️)
 
 ## Installation
 
@@ -36,52 +36,97 @@ cd piqa
 cp -R piqa <path/to/project>/piqa
 ```
 
-## Getting started
-
-The `piqa` package is divided in several submodules, each of which implements the functions and/or classes related to a specific image quality assessement metric.
-
-```python
-import torch
-from piqa import psnr, ssim
-
-x = torch.rand(3, 3, 256, 256, requires_grad=True).cuda()
-y = torch.rand(3, 3, 256, 256, requires_grad=True).cuda()
-
-# PSNR function
-l = psnr.psnr(x, y)
-
-# SSIM instantiable object
-criterion = ssim.SSIM().cuda()
-l = criterion(x, y)
-l.backward()
-```
-
-### Metrics
-
-| Acronym | Module         | Year | Metric                                                                                               |
-|:-------:|----------------|:----:|------------------------------------------------------------------------------------------------------|
-|    TV   | [piqa.tv]      | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
-|   PSNR  | [piqa.psnr]    |   /  | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
-|   SSIM  | [piqa.ssim]    | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
-| MS-SSIM | [piqa.ssim]    | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
-|  LPIPS  | [piqa.lpips]   | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
-|   GMSD  | [piqa.gmsd]    | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
-| MS-GMSD | [piqa.gmsd]    | 2017 | [Multi-Scale Gradient Magnitude Similiarity Deviation](https://ieeexplore.ieee.org/document/7952357) |
-|   MDSI  | [piqa.mdsi]    | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
-| HaarPSI | [piqa.haarpsi] | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
-
-[piqa.tv]: piqa/tv.py
-[piqa.psnr]: piqa/psnr.py
-[piqa.ssim]: piqa/ssim.py
-[piqa.lpips]: piqa/lpips.py
-[piqa.gmsd]: piqa/gmsd.py
-[piqa.mdsi]: piqa/mdsi.py
-[piqa.haarpsi]: piqa/haarpsi.py
-
 ## Documentation
 
 The [documentation](https://francois-rozet.github.io/piqa/) of this package is generated automatically using [`pdoc`](https://github.com/pdoc3/pdoc).
 
-### Code style
+## Getting started
 
-The code follows the [Google Python style](https://google.github.io/styleguide/pyguide.html) and is compliant with [YAPF](https://github.com/google/yapf).
+In `piqa`, each metric is associated to a class, child of `torch.nn.Module`, which has to be instantiated to evaluate the metric.
+
+```python
+import torch
+
+# PSNR
+from piqa import PSNR
+
+x = torch.rand(5, 3, 256, 256)
+y = torch.rand(5, 3, 256, 256)
+
+psnr = PSNR()
+l = psnr(x, y)
+
+# SSIM
+from piqa import SSIM
+
+x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+
+ssim = SSIM().cuda()
+l = ssim(x, y)
+l.backward()
+```
+
+Like `torch.nn` built-in components, these classes are based on functional definitions of the metrics, which are less user-friendly, but more versatile.
+
+```python
+import torch
+
+from piqa.ssim import ssim
+from piqa.utils.functional import gaussian_kernel
+
+x = torch.rand(5, 3, 256, 256)
+y = torch.rand(5, 3, 256, 256)
+
+kernel = gaussian_kernel(11, sigma=1.5).repeat(3, 1, 1)
+
+l = ssim(x, y, kernel=kernel, channel_avg=False)
+```
+
+### Metrics
+
+| Acronym | Class     | Year | Metric                                                                                               |
+|:-------:|:---------:|:----:|------------------------------------------------------------------------------------------------------|
+| TV      | `TV`      | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
+| PSNR    | `PSNR`    | /    | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
+| SSIM    | `SSIM`    | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
+| MS-SSIM | `MS_SSIM` | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
+| LPIPS   | `LPIPS`   | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
+| GMSD    | `GMSD`    | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
+| MS-GMSD | `MS_GMSD` | 2017 | [Multi-Scale Gradient Magnitude Similiarity Deviation](https://ieeexplore.ieee.org/document/7952357) |
+| MDSI    | `MDSI`    | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
+| HaarPSI | `HaarPSI` | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
+
+### JIT
+
+Most functional components of `piqa` support  PyTorch's JIT, *i.e.* [TorchScript](https://pytorch.org/docs/stable/jit.html), which is a way to create serializable and optimizable functions from PyTorch code.
+
+By default, jitting is enabled for those components. To disable it, the `PIQA_JIT` environment variable has to be set to `0`. To do so temporarily,
+
+* UNIX-like `bash`
+
+```bash
+export PIQA_JIT=0
+```
+
+* Windows `cmd`
+
+```cmd
+set PIQA_JIT=0
+```
+
+* Microsoft `PowerShell`
+
+```powershell
+$env:PIQA_JIT=0
+```
+
+### Assert
+
+PIQA uses type assertions to raise meaningful messages when an object-oriented component doesn't receive an input of the expected type. This feature eases a lot early prototyping and debugging, but it might hurt a little the performances.
+
+If you need the absolute best performances, the assertions can be disabled with the Python flag [`-O`](https://docs.python.org/3/using/cmdline.html#cmdoption-o). For example,
+
+```bash
+python -O your_awesome_code_using_piqa.py
+```

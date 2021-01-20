@@ -18,37 +18,32 @@ References:
     https://ieeexplore.ieee.org/abstract/document/1292216/
 """
 
-__pdoc__ = {'_ssim': True, '_ms_ssim': True}
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import (
-    _jit,
-    build_reduce,
+from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils.functional import (
     gaussian_kernel,
     kernel_views,
     channel_convs,
 )
 
-from typing import List, Tuple
-
-_MS_WEIGHTS = torch.FloatTensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
+from typing import Tuple
 
 
 @_jit
-def _ssim(
+def ssim(
     x: torch.Tensor,
     y: torch.Tensor,
     kernel: torch.Tensor,
+    channel_avg: bool = True,
     value_range: float = 1.,
-    non_negative: bool = False,
     k1: float = 0.01,
     k2: float = 0.03,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    r"""Returns the channel-wise SSIM and Contrast Sensitivity (CS)
-    between \(x\) and \(y\).
+    r"""Returns the SSIM and Contrast Sensitivity (CS) between
+    \(x\) and \(y\).
 
     $$ \text{SSIM}(x, y) =
         \frac{2 \mu_x \mu_y + C_1}{\mu^2_x + \mu^2_y + C_1} \text{CS}(x, y) $$
@@ -61,28 +56,30 @@ def _ssim(
     \(x\), \(y\), \((x - \mu_x)^2\), \((y - \mu_y)^2\) and
     \((x - \mu_x)(y - \mu_y)\), respectively.
 
-    In practice, SSIM and CS are averaged over the image width and height.
+    In practice, SSIM and CS are averaged over the spatial dimensions.
+    If `channel_avg` is `True`, they are also averaged over the channels.
 
     Args:
         x: An input tensor, \((N, C, H, *)\).
         y: A target tensor, \((N, C, H, *)\).
         kernel: A smoothing kernel, \((C, 1, K)\).
-            E.g. `piqa.utils.gaussian_kernel`.
+            E.g. `piqa.utils.functional.gaussian_kernel`.
+        channel_avg: Whether to average over the channels or not.
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
-        non_negative: Whether negative values are clipped or not.
 
         For the remaining arguments, refer to [1].
 
     Returns:
-        The channel-wise SSIM and CS tensors, both \((N, C)\).
+        The SSIM and CS tensors, both \((N, C)\) or \((N,)\)
+        depending on `channel_avg`
 
     Example:
         >>> x = torch.rand(5, 3, 64, 64, 64)
         >>> y = torch.rand(5, 3, 64, 64, 64)
         >>> kernel = gaussian_kernel(7).repeat(3, 1, 1)
-        >>> ss, cs = _ssim(x, y, kernel)
+        >>> ss, cs = ssim(x, y, kernel)
         >>> ss.size(), cs.size()
-        (torch.Size([5, 3]), torch.Size([5, 3]))
+        (torch.Size([5]), torch.Size([5]))
     """
 
     c1 = (k1 * value_range) ** 2
@@ -110,16 +107,16 @@ def _ssim(
     ss = (2. * mu_xy + c1) / (mu_xx + mu_yy + c1) * cs
 
     # Average
-    ss, cs = ss.flatten(2).mean(dim=-1), cs.flatten(2).mean(dim=-1)
+    if channel_avg:
+        ss, cs = ss.flatten(1), cs.flatten(1)
+    else:
+        ss, cs = ss.flatten(2), cs.flatten(2)
 
-    if non_negative:
-        ss, cs = torch.relu(ss), torch.relu(cs)
-
-    return ss, cs
+    return ss.mean(dim=-1), cs.mean(dim=-1)
 
 
 @_jit
-def _ms_ssim(
+def ms_ssim(
     x: torch.Tensor,
     y: torch.Tensor,
     kernel: torch.Tensor,
@@ -128,7 +125,7 @@ def _ms_ssim(
     k1: float = 0.01,
     k2: float = 0.03,
 ) -> torch.Tensor:
-    r"""Returns the channel-wise MS-SSIM between \(x\) and \(y\).
+    r"""Returns the MS-SSIM between \(x\) and \(y\).
 
     $$ \text{MS-SSIM}(x, y) =
         \text{SSIM}(x^M, y^M)^{\gamma_M} \prod^{M - 1}_{i = 1}
@@ -141,23 +138,23 @@ def _ms_ssim(
         x: An input tensor, \((N, C, H, *)\).
         y: A target tensor, \((N, C, H, *)\).
         kernel: A smoothing kernel, \((C, 1, K)\).
-            E.g. `piqa.utils.gaussian_kernel`.
+            E.g. `piqa.utils.functional.gaussian_kernel`.
         weights: The weights \(\gamma_i\) of the scales, \((M,)\).
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [2].
 
     Returns:
-        The channel-wise MS-SSIM tensor, \((N, C)\).
+        The MS-SSIM vector, \((N,)\).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
         >>> kernel = gaussian_kernel(7).repeat(3, 1, 1)
         >>> weights = torch.rand(5)
-        >>> l = _ms_ssim(x, y, kernel, weights)
+        >>> l = ms_ssim(x, y, kernel, weights)
         >>> l.size()
-        torch.Size([5, 3])
+        torch.Size([5])
     """
 
     css = []
@@ -168,77 +165,19 @@ def _ms_ssim(
             x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
             y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
 
-        ss, cs = _ssim(
+        ss, cs = ssim(
             x, y, kernel,
+            channel_avg=False,
             value_range=value_range,
-            non_negative=True,
             k1=k1, k2=k2,
         )
 
-        css.append(cs if i + 1 < m else ss)
+        css.append(torch.relu(cs) if i + 1 < m else torch.relu(ss))
 
     msss = torch.stack(css, dim=-1)
     msss = (msss ** weights).prod(dim=-1)
 
-    return msss
-
-
-def ssim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the SSIM between \(x\) and \(y\).
-
-    Args:
-        x: An input tensor, \((N, C, H, *)\).
-        y: A target tensor, \((N, C, H, *)\).
-
-        `**kwargs` are transmitted to `SSIM`.
-
-    Returns:
-        The SSIM vector, \((N,)\).
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = ssim(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    kwargs['reduction'] = 'none'
-
-    return SSIM(**kwargs).to(x.device)(x, y)
-
-
-def ms_ssim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the MS-SSIM between \(x\) and \(y\).
-
-    Args:
-        x: An input tensor, \((N, C, H, *)\).
-        y: A target tensor, \((N, C, H, *)\).
-
-        `**kwargs` are transmitted to `MS_SSIM`.
-
-    Returns:
-        The MS-SSIM vector, \((N,)\).
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = ms_ssim(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    kwargs['reduction'] = 'none'
-
-    return MS_SSIM(**kwargs).to(x.device)(x, y)
+    return msss.mean(dim=-1)
 
 
 class SSIM(nn.Module):
@@ -252,7 +191,7 @@ class SSIM(nn.Module):
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `_ssim`.
+        `**kwargs` are transmitted to `ssim`.
 
     Shapes:
         * Input: \((N, C, H, *)\)
@@ -266,6 +205,7 @@ class SSIM(nn.Module):
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
+        >>> l.backward()
     """
 
     def __init__(
@@ -283,7 +223,8 @@ class SSIM(nn.Module):
 
         self.register_buffer('kernel', kernel.repeat(n_channels, 1, 1))
 
-        self.reduce = build_reduce(reduction)
+        self.reduction = reduction
+        self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
     def forward(
@@ -294,14 +235,17 @@ class SSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        l = _ssim(
-            input,
-            target,
-            kernel=self.kernel,
-            **self.kwargs,
-        )[0].mean(dim=-1)
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(3, -1),
+            n_channels=self.kernel.size(0),
+            value_range=(0., self.value_range),
+        )
 
-        return self.reduce(l)
+        l = ssim(input, target, kernel=self.kernel, **self.kwargs)[0]
+
+        return _reduce(l, self.reduction)
 
 
 class MS_SSIM(nn.Module):
@@ -313,11 +257,11 @@ class MS_SSIM(nn.Module):
         sigma: The standard deviation of the window.
         n_channels: The number of channels \(C\).
         weights: The weights of the scales, \((M,)\).
-            If `None`, use the official weights instead.
+            If `None`, use the `MS_SSIM.OFFICIAL_WEIGHTS` instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `_ms_ssim`.
+        `**kwargs` are transmitted to `ms_ssim`.
 
     Shapes:
         * Input: \((N, C, H, *)\)
@@ -333,6 +277,10 @@ class MS_SSIM(nn.Module):
         torch.Size([])
         >>> l.backward()
     """
+
+    OFFICIAL_WEIGHTS: torch.Tensor = torch.tensor(
+        [0.0448, 0.2856, 0.3001, 0.2363, 0.1333]
+    )
 
     def __init__(
         self,
@@ -351,11 +299,12 @@ class MS_SSIM(nn.Module):
         self.register_buffer('kernel', kernel.repeat(n_channels, 1, 1))
 
         if weights is None:
-            weights = _MS_WEIGHTS
+            weights = self.OFFICIAL_WEIGHTS
 
         self.register_buffer('weights', weights)
 
-        self.reduce = build_reduce(reduction)
+        self.reduction = reduction
+        self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
     def forward(
@@ -366,12 +315,20 @@ class MS_SSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        l = _ms_ssim(
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(3, -1),
+            n_channels=self.kernel.size(0),
+            value_range=(0., self.value_range),
+        )
+
+        l = ms_ssim(
             input,
             target,
             kernel=self.kernel,
             weights=self.weights,
             **self.kwargs,
-        ).mean(dim=-1)
+        )
 
-        return self.reduce(l)
+        return _reduce(l, self.reduction)

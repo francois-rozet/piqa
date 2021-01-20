@@ -8,9 +8,7 @@ import unittest
 sys.path.append(os.path.abspath('..'))
 
 from piqa import utils
-
-utils._jit = lambda f: f
-
+from piqa.utils import color, complex, functional
 from piqa import (
     tv,
     psnr,
@@ -26,6 +24,9 @@ if __name__ == '__main__':
     suite = unittest.TestSuite()
     modules = [
         utils,
+        color,
+        complex,
+        functional,
         tv,
         psnr,
         ssim,

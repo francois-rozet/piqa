@@ -30,35 +30,25 @@ import pytorch_msssim as vainf
 
 sys.path.append(os.path.abspath('..'))
 
-from piqa import (
-    tv,
-    psnr,
-    ssim,
-    lpips,
-    mdsi,
-    gmsd,
-    haarpsi,
-)
+import piqa
 
 
 LENNA = 'https://upload.wikimedia.org/wikipedia/en/7/7d/Lenna_%28test_image%29.png'
 
 METRICS = {
-    'TV': lambda: (1, {
+    'TV': (1, {
         'kornia.tv': kornia.total_variation,
         'piq.tv': lambda x: piq.total_variation(x, norm_type='l1'),
-        'piqa.tv': tv.tv,
         'piq.TV': piq.TVLoss(norm_type='l1'),
-        'piqa.TV': tv.TV(),
+        'piqa.TV': piqa.TV(),
     }),
-    'PSNR': lambda: (2, {
+    'PSNR': (2, {
         'sk.psnr': sk.peak_signal_noise_ratio,
         'piq.psnr': piq.psnr,
-        'piqa.psnr': psnr.psnr,
         'kornia.PSNR': kornia.PSNRLoss(max_val=1.),
-        'piqa.PSNR': psnr.PSNR(),
+        'piqa.PSNR': piqa.PSNR(),
     }),
-    'SSIM': lambda: (2, {
+    'SSIM': (2, {
         'sk.ssim': lambda x, y: sk.structural_similarity(
             x, y,
             win_size=11,
@@ -73,40 +63,40 @@ METRICS = {
         'piq.SSIM-loss': piq.SSIMLoss(),
         'IQA.SSIM-loss': IQA.SSIM(),
         'vainf.SSIM': vainf.SSIM(data_range=1.),
-        'piqa.SSIM': ssim.SSIM(),
+        'piqa.SSIM': piqa.SSIM(),
     }),
-    'MS-SSIM': lambda: (2, {
+    'MS-SSIM': (2, {
         'piq.ms_ssim': piq.multi_scale_ssim,
         'piq.MS_SSIM-loss': piq.MultiScaleSSIMLoss(),
         'IQA.MS_SSIM-loss': IQA.MS_SSIM(),
         'vainf.MS_SSIM': vainf.MS_SSIM(data_range=1.),
-        'piqa.MS_SSIM': ssim.MS_SSIM(),
+        'piqa.MS_SSIM': piqa.MS_SSIM(),
     }),
-    'LPIPS': lambda: (2, {
+    'LPIPS': (2, {
         'piq.LPIPS': piq.LPIPS(),
         'IQA.LPIPS': IQA.LPIPSvgg(),
-        'piqa.LPIPS': lpips.LPIPS(network='vgg')
+        'piqa.LPIPS': piqa.LPIPS(network='vgg')
     }),
-    'GMSD': lambda: (2, {
+    'GMSD': (2, {
         'piq.gmsd': piq.gmsd,
         'piq.GMSD': piq.GMSDLoss(),
-        'IQA.GMSD': IQA.GMSD(),
-        'piqa.GMSD': gmsd.GMSD(),
+        # 'IQA.GMSD': IQA.GMSD(),
+        'piqa.GMSD': piqa.GMSD(),
     }),
-    'MS-GMSD': lambda: (2, {
+    'MS-GMSD': (2, {
         'piq.ms_gmsd': piq.multi_scale_gmsd,
         'piq.MS_GMSD': piq.MultiScaleGMSDLoss(),
-        'piqa.MS_GMSD': gmsd.MS_GMSD(),
+        'piqa.MS_GMSD': piqa.MS_GMSD(),
     }),
-    'MDSI': lambda: (2, {
+    'MDSI': (2, {
         'piq.mdsi': piq.mdsi,
         'piq.MDSI-loss': piq.MDSILoss(),
-        'piqa.MDSI': mdsi.MDSI(),
+        'piqa.MDSI': piqa.MDSI(),
     }),
-    'HaarPSI': lambda: (2, {
+    'HaarPSI': (2, {
         'piq.haarpsi': piq.haarpsi,
         'piq.HaarPSI-loss': piq.HaarPSILoss(),
-        'piqa.HaarPSI': haarpsi.HaarPSI(),
+        'piqa.HaarPSI': piqa.HaarPSI(),
     }),
 }
 
@@ -160,11 +150,11 @@ def main(
     # Metrics
     if metrics:
         metrics = {
-            k: v() for (k, v) in METRICS.items()
+            k: v for (k, v) in METRICS.items()
             if k in metrics
         }
     else:
-        metrics = {k: v() for (k, v) in METRICS.items()}
+        metrics = {k: v for (k, v) in METRICS.items()}
 
     # Benchmark
     for name, (nargs, methods) in metrics.items():

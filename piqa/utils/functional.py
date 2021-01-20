@@ -1,14 +1,11 @@
-r"""Miscellaneous tools such as modules, functionals and more.
+r"""General purpose tensor functionals
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import List, Tuple, Union
-
-
-_jit = torch.jit.script
+from typing import List, Tuple  #, Union
 
 
 def channel_conv(
@@ -77,45 +74,6 @@ def channel_convs(
         x = channel_conv(x, k)
 
     return x
-
-
-def unravel_index(
-    indices: torch.LongTensor,
-    shape: List[int],
-) -> torch.LongTensor:
-    r"""Converts flat indices into unraveled coordinates in a target shape.
-
-    This is a `torch` implementation of `numpy.unravel_index`.
-
-    Args:
-        indices: A tensor of (flat) indices, \((*, N)\).
-        shape: The targeted shape, \((D,)\).
-
-    Returns:
-        The unraveled coordinates, \((*, N, D)\).
-
-    Example:
-        >>> unravel_index(torch.arange(9), shape=(3, 3))
-        tensor([[0, 0],
-                [0, 1],
-                [0, 2],
-                [1, 0],
-                [1, 1],
-                [1, 2],
-                [2, 0],
-                [2, 1],
-                [2, 2]])
-    """
-
-    coord = []
-
-    for dim in reversed(shape):
-        coord.append(indices % dim)
-        indices = indices // dim
-
-    coord = torch.stack(coord[::-1], dim=-1)
-
-    return coord
 
 
 def gaussian_kernel(
@@ -389,199 +347,40 @@ def normalize_tensor(
     return x / (norm + epsilon)
 
 
-def cstack(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
-    r"""Returns a complex tensor with its real part equal to \(\Re\) and
-    its imaginary part equal to \(\Im\).
+def unravel_index(
+    indices: torch.LongTensor,
+    shape: List[int],
+) -> torch.LongTensor:
+    r"""Converts flat indices into unraveled coordinates in a target shape.
 
-    $$ c = \Re + i \Im $$
+    This is a `torch` implementation of `numpy.unravel_index`.
 
     Args:
-        real: A tensor \(\Re\), \((*,)\).
-        imag: A tensor \(\Im\), \((*,)\).
+        indices: A tensor of (flat) indices, \((*, N)\).
+        shape: The targeted shape, \((D,)\).
 
     Returns:
-        The complex tensor, \((*, 2)\).
+        The unraveled coordinates, \((*, N, D)\).
 
     Example:
-        >>> x = torch.tensor([1., 0.707])
-        >>> y = torch.tensor([0., 0.707])
-        >>> cstack(x, y)
-        tensor([[1.0000, 0.0000],
-                [0.7070, 0.7070]])
+        >>> unravel_index(torch.arange(9), shape=(3, 3))
+        tensor([[0, 0],
+                [0, 1],
+                [0, 2],
+                [1, 0],
+                [1, 1],
+                [1, 2],
+                [2, 0],
+                [2, 1],
+                [2, 2]])
     """
 
-    return torch.stack([real, imag], dim=-1)
+    coord = []
 
+    for dim in reversed(shape):
+        coord.append(indices % dim)
+        indices = indices // dim
 
-def cabs(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
-    r"""Returns the absolute value (modulus) of \(x\).
+    coord = torch.stack(coord[::-1], dim=-1)
 
-    $$ \left| x \right| = \sqrt{ \Re(x)^2 + \Im(x)^2 } $$
-
-    Args:
-        x: A complex tensor, \((*, 2)\).
-        squared: Whether the output is squared or not.
-
-    Returns:
-        The absolute value tensor, \((*,)\).
-
-    Example:
-        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
-        >>> cabs(x)
-        tensor([1.0000, 0.9998])
-    """
-
-    x = (x ** 2).sum(dim=-1)
-
-    if not squared:
-        x = torch.sqrt(x)
-
-    return x
-
-
-def cangle(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the angle (phase) of \(x\).
-
-    $$ \phi(x) = \operatorname{atan2}(\Im(x), \Re(x)) $$
-
-    Args:
-        x: A complex tensor, \((*, 2)\).
-
-    Returns:
-        The angle tensor, \((*,)\).
-
-    Example:
-        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
-        >>> cangle(x)
-        tensor([0.0000, 0.7854])
-    """
-
-    return torch.atan2(x[..., 1], x[..., 0])
-
-
-def cprod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    r"""Returns the product of \(x\) and \(y\).
-
-    $$ x y = \Re(x) \Re(y) - \Im(x) \Im(y)
-        + i \left( \Re(x) \Im(y) - \Im(x) \Re(y) \right) $$
-
-    Args:
-        x: A complex tensor, \((*, 2)\).
-        y: A complex tensor, \((*, 2)\).
-
-    Returns:
-        The product tensor, \((*, 2)\).
-
-    Example:
-        >>> x = torch.tensor([[1.,  0.], [0.707,  0.707]])
-        >>> y = torch.tensor([[1., -0.], [0.707, -0.707]])
-        >>> cprod(x, y)
-        tensor([[1.0000, 0.0000],
-                [0.9997, 0.0000]])
-    """
-
-    x_r, x_i = x[..., 0], x[..., 1]
-    y_r, y_i = y[..., 0], y[..., 1]
-
-    return cstack(
-        x_r * y_r - x_i * y_i,
-        x_i * y_r + x_r * y_i,
-    )
-
-
-def cpow(x: torch.Tensor, exponent: float) -> torch.Tensor:
-    r"""Returns the power of \(x\) with `exponent`.
-
-    $$ x^p = \left| x \right|^p \exp(i \phi(x))^p $$
-
-    Args:
-        x: A complex tensor, \((*, 2)\).
-        exponent: The exponent \(p\).
-
-    Returns:
-        The power tensor, \((*, 2)\).
-
-    Example:
-        >>> x = torch.tensor([[1., 0.], [0.707, 0.707]])
-        >>> cpow(x, 2.)
-        tensor([[ 1.0000e+00,  0.0000e+00],
-                [-4.3698e-08,  9.9970e-01]])
-    """
-
-    r = cabs(x, squared=True) ** (exponent / 2)
-    phi = cangle(x) * exponent
-
-    return cstack(r * torch.cos(phi), r * torch.sin(phi))
-
-
-class Intermediary(nn.Module):
-    r"""Module that catches and returns the outputs of indermediate
-    target layers of a sequential module during its forward pass.
-
-    Args:
-        layers: A sequential module.
-        targets: A list of target layer indexes.
-    """
-
-    def __init__(self, layers: nn.Sequential, targets: List[int]):
-        r""""""
-        super().__init__()
-
-        self.layers = nn.ModuleList()
-        j = 0
-
-        seq: List[nn.Module] = []
-
-        for i, layer in enumerate(layers):
-            seq.append(layer)
-
-            if i == targets[j]:
-                self.layers.append(nn.Sequential(*seq))
-                seq.clear()
-
-                j += 1
-                if j == len(targets):
-                    break
-
-    def forward(self, input: torch.Tensor) -> List[torch.Tensor]:
-        r"""Defines the computation performed at every call.
-        """
-
-        output = []
-
-        for layer in self.layers:
-            input = layer(input)
-            output.append(input)
-
-        return output
-
-
-def build_reduce(reduction: str = 'mean') -> nn.Module:
-    r"""Returns a reducing module.
-
-    Args:
-        reduction: Specifies the reduce type:
-            `'none'` | `'mean'` | `'sum'`.
-
-    Example:
-        >>> r = build_reduce(reduction='sum')
-        >>> r(torch.arange(5))
-        tensor(10)
-    """
-
-    if reduction == 'mean':
-        return _Mean()
-    elif reduction == 'sum':
-        return _Sum()
-
-    return nn.Identity()
-
-
-class _Mean(nn.Module):
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return input.mean()
-
-
-class _Sum(nn.Module):
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return input.sum()
+    return coord

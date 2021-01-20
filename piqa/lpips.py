@@ -18,12 +18,14 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.hub as hub
 
-from piqa.utils import _jit, build_reduce, normalize_tensor, Intermediary
+from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils.functional import normalize_tensor
 
-from typing import Dict
+from typing import Dict, List
 
-_SHIFT = torch.Tensor([0.485, 0.456, 0.406])
-_SCALE = torch.Tensor([0.229, 0.224, 0.225])
+
+_SHIFT = torch.tensor([0.485, 0.456, 0.406])
+_SCALE = torch.tensor([0.229, 0.224, 0.225])
 
 _WEIGHTS_URL = (
     'https://github.com/richzhang/PerceptualSimilarity'
@@ -62,6 +64,48 @@ def get_weights(
     }
 
     return weights
+
+
+class Intermediary(nn.Module):
+    r"""Module that catches and returns the outputs of indermediate
+    target layers of a sequential module during its forward pass.
+
+    Args:
+        layers: A sequential module.
+        targets: A list of target layer indexes.
+    """
+
+    def __init__(self, layers: nn.Sequential, targets: List[int]):
+        r""""""
+        super().__init__()
+
+        self.layers = nn.ModuleList()
+        j = 0
+
+        seq: List[nn.Module] = []
+
+        for i, layer in enumerate(layers):
+            seq.append(layer)
+
+            if i == targets[j]:
+                self.layers.append(nn.Sequential(*seq))
+                seq.clear()
+
+                j += 1
+                if j == len(targets):
+                    break
+
+    def forward(self, input: torch.Tensor) -> List[torch.Tensor]:
+        r"""Defines the computation performed at every call.
+        """
+
+        output = []
+
+        for layer in self.layers:
+            input = layer(input)
+            output.append(input)
+
+        return output
 
 
 class LPIPS(nn.Module):
@@ -134,7 +178,7 @@ class LPIPS(nn.Module):
             targets = [3, 8, 15, 22, 29]
             channels = [64, 128, 256, 512, 512]
         else:
-            raise ValueError('Unknown network architecture ' + network)
+            raise ValueError(f'Unknown network architecture {network}')
 
         self.net = Intermediary(layers, targets)
         for p in self.net.parameters():
@@ -154,7 +198,7 @@ class LPIPS(nn.Module):
         if eval:
             self.eval()
 
-        self.reduce = build_reduce(reduction)
+        self.reduction = reduction
 
     def forward(
         self,
@@ -164,10 +208,20 @@ class LPIPS(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
+        _assert_type(
+            [input, target],
+            device=self.shift.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., 1.) if self.scaling else (0., -1.),
+        )
+
+        # ImageNet scaling
         if self.scaling:
             input = (input - self.shift) / self.scale
             target = (target - self.shift) / self.scale
 
+        # LPIPS
         residuals = []
 
         for lin, fx, fy in zip(self.lins, self.net(input), self.net(target)):
@@ -179,4 +233,4 @@ class LPIPS(nn.Module):
 
         l = torch.stack(residuals, dim=-1).sum(dim=-1)
 
-        return self.reduce(l)
+        return _reduce(l, self.reduction)

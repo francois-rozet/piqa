@@ -9,42 +9,32 @@ References:
     https://arxiv.org/abs/1608.07433
 """
 
-__pdoc__ = {'_mdsi': True}
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import (
-    _jit,
-    build_reduce,
+from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils.color import get_conv
+from piqa.utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
     tensor_norm,
-    cstack,
-    cprod,
-    cpow,
-    cabs,
 )
 
-_LHM_WEIGHTS = torch.FloatTensor([
-    [0.299, 0.587, 0.114],
-    [0.3, 0.04, -0.35],
-    [0.34, -0.6, 0.17],
-])
+import piqa.utils.complex as cx
 
 
 @_jit
-def _mdsi(
+def mdsi(
     x: torch.Tensor,
     y: torch.Tensor,
     kernel: torch.Tensor,
-    value_range: float = 1.,
     combination: str = 'sum',
-    c1: float = 0.00215,  # 140. / (255. ** 2)
-    c2: float = 0.00085,  # 55. / (255. ** 2)
-    c3: float = 0.00846,  # 550. / (255. ** 2)
+    value_range: float = 1.,
+    c1: float = 140. / (255. ** 2),
+    c2: float = 55. / (255. ** 2),
+    c3: float = 550. / (255. ** 2),
     alpha: float = 0.6,  # 'sum'
     beta: float = 0.1,  # 'prod'
     gamma: float = 0.2,  # 'prod'
@@ -59,10 +49,9 @@ def _mdsi(
         x: An input tensor, \((N, 3, H, W)\).
         y: A target tensor, \((N, 3, H, W)\).
         kernel: A gradient kernel, \((2, 1, K, K)\).
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
         combination: Specifies the scheme to combine the gradient
-            and chromaticity similarities (GS, CS):
-            `'sum'` | `'prod'`.
+            and chromaticity similarities (GS, CS): `'sum'` | `'prod'`.
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
 
@@ -73,7 +62,7 @@ def _mdsi(
         >>> x = torch.rand(5, 1, 256, 256)
         >>> y = torch.rand(5, 1, 256, 256)
         >>> kernel = gradient_kernel(prewitt_kernel())
-        >>> l = _mdsi(x, y, kernel)
+        >>> l = mdsi(x, y, kernel)
         >>> l.size()
         torch.Size([5])
     """
@@ -110,57 +99,28 @@ def _mdsi(
     cs = cs_num / cs_den
 
     # Gradient-chromaticity similarity
-    gs = cstack(gs, torch.zeros_like(gs))
-    cs = cstack(cs, torch.zeros_like(cs))
+    gs = cx.complex(gs, torch.zeros_like(gs))
+    cs = cx.complex(cs, torch.zeros_like(cs))
 
     if combination == 'prod':
-        gcs = cprod(cpow(gs, gamma), cpow(cs, beta))
+        gcs = cx.prod(cx.pow(gs, gamma), cx.pow(cs, beta))
     else:  # combination == 'sum'
         gcs = alpha * gs + (1. - alpha) * cs
 
     # Mean deviation similarity
-    gcs_q = cpow(gcs, q)
+    gcs_q = cx.pow(gcs, q)
     gcs_q_avg = gcs_q.mean(dim=(-2, -3), keepdim=True)
-    score = cabs(gcs_q - gcs_q_avg, squared=True) ** (rho / 2)
+    score = cx.mod(gcs_q - gcs_q_avg, squared=True) ** (rho / 2)
     mds = score.mean(dim=(-1, -2)) ** (o / rho)
 
     return mds
-
-
-def mdsi(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the MDSI between \(x\) and \(y\).
-
-    Args:
-        x: An input tensor, \((N, 3, H, W)\).
-        y: A target tensor, \((N, 3, H, W)\).
-
-        `**kwargs` are transmitted to `MDSI`.
-
-    Returns:
-        The MDSI vector, \((N,)\).
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = mdsi(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    kwargs['reduction'] = 'none'
-
-    return MDSI(**kwargs).to(x.device)(x, y)
 
 
 class MDSI(nn.Module):
     r"""Creates a criterion that measures the MDSI
     between an input and a target.
 
-    Before applying `_mdsi`, the input and target are converted from
+    Before applying `mdsi`, the input and target are converted from
     RBG to LHM and downsampled by a factor \( \frac{\min(H, W)}{256} \).
 
     Args:
@@ -169,7 +129,7 @@ class MDSI(nn.Module):
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `_mdsi`.
+        `**kwargs` are transmitted to `mdsi`.
 
     Shapes:
         * Input: \((N, 3, H, W)\)
@@ -199,9 +159,10 @@ class MDSI(nn.Module):
             kernel = gradient_kernel(prewitt_kernel())
 
         self.register_buffer('kernel', kernel)
-        self.register_buffer('lhm_weights', _LHM_WEIGHTS.view(3, 3, 1, 1))
 
-        self.reduce = build_reduce(reduction)
+        self.convert = get_conv('RGB', 'LHM')
+        self.reduction = reduction
+        self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
     def forward(
@@ -212,6 +173,14 @@ class MDSI(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
         # Downsample
         _, _, h, w = input.size()
         M = round(min(h, w) / 256)
@@ -221,10 +190,10 @@ class MDSI(nn.Module):
             target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
 
         # RGB to LHM
-        input = F.conv2d(input, self.lhm_weights)
-        target = F.conv2d(target, self.lhm_weights)
+        input = self.convert(input)
+        target = self.convert(target)
 
         # MDSI
-        l = _mdsi(input, target, self.kernel, **self.kwargs)
+        l = mdsi(input, target, kernel=self.kernel, **self.kwargs)
 
-        return self.reduce(l)
+        return _reduce(l, self.reduction)

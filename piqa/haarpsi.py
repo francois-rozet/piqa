@@ -15,44 +15,36 @@ References:
     https://arxiv.org/abs/1607.06140
 """
 
-__pdoc__ = {'_haarpsi': True}
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import (
-    _jit,
-    build_reduce,
+from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils.color import get_conv
+from piqa.utils.functional import (
     haar_kernel,
     gradient_kernel,
     channel_conv,
 )
 
-_YIQ_WEIGHTS = torch.FloatTensor([
-    [0.299, 0.587, 0.114],
-    [0.596, -0.274, -0.322],
-    [0.211, -0.523, 0.312],
-])
-
 
 @_jit
-def _haarpsi(
+def haarpsi(
     x: torch.Tensor,
     y: torch.Tensor,
-    value_range: float = 1.,
     n_kernels: int = 3,
-    c: float = 0.00046,  # 30. / (255. ** 2)
+    value_range: float = 1.,
+    c: float = 30. / (255. ** 2),
     alpha: float = 4.2,
 ) -> torch.Tensor:
     r"""Returns the HaarPSI between \(x\) and \(y\),
     without color space conversion.
 
     Args:
-        x: An input tensor, \((N, 3, H, W)\) or \((N, 1, H, W)\).
-        y: A target tensor, \((N, 3, H, W)\) or \((N, 1, H, W)\).
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
+        y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
         n_kernels: The number of Haar wavelet kernels to use.
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
 
@@ -62,7 +54,7 @@ def _haarpsi(
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = _haarpsi(x, y)
+        >>> l = haarpsi(x, y)
         >>> l.size()
         torch.Size([5])
     """
@@ -125,48 +117,19 @@ def _haarpsi(
     return hpsi
 
 
-def haarpsi(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    **kwargs,
-) -> torch.Tensor:
-    r"""Returns the HaarPSI between \(x\) and \(y\).
-
-    Args:
-        x: An input tensor, \((N, 3, H, W)\).
-        y: A target tensor, \((N, 3, H, W)\).
-
-        `**kwargs` are transmitted to `HaarPSI`.
-
-    Returns:
-        The HaarPSI vector, \((N,)\).
-
-    Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
-        >>> l = haarpsi(x, y)
-        >>> l.size()
-        torch.Size([5])
-    """
-
-    kwargs['reduction'] = 'none'
-
-    return HaarPSI(**kwargs).to(x.device)(x, y)
-
-
 class HaarPSI(nn.Module):
     r"""Creates a criterion that measures the HaarPSI
     between an input and a target.
 
-    Before applying `_haarpsi`, the input and target are converted from
-    RBG to YIQ and downsampled by a factor 2.
+    Before applying `haarpsi`, the input and target are converted from
+    RBG to Y(IQ) and downsampled by a factor 2.
 
     Args:
         chromatic: Whether to use the chromatic channels (IQ) or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `_haarpsi`.
+        `**kwargs` are transmitted to `haarpsi`.
 
     Shapes:
         * Input: \((N, 3, H, W)\)
@@ -192,14 +155,9 @@ class HaarPSI(nn.Module):
         r""""""
         super().__init__()
 
-        if chromatic:
-            yiq_weights = _YIQ_WEIGHTS.view(3, 3, 1, 1)
-        else:
-            yiq_weights = _YIQ_WEIGHTS[:1].view(1, 3, 1, 1)
-
-        self.register_buffer('yiq_weights', yiq_weights)
-
-        self.reduce = build_reduce(reduction)
+        self.convert = get_conv('RGB', 'YIQ' if chromatic else 'Y')
+        self.reduction = reduction
+        self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
     def forward(
@@ -210,15 +168,23 @@ class HaarPSI(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
+        _assert_type(
+            [input, target],
+            device=self.convert.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
         # Downsample
         input = F.avg_pool2d(input, 2, ceil_mode=True)
         target = F.avg_pool2d(target, 2, ceil_mode=True)
 
-        # RGB to YIQ
-        input = F.conv2d(input, self.yiq_weights)
-        target = F.conv2d(target, self.yiq_weights)
+        # RGB to Y(IQ)
+        input = self.convert(input)
+        target = self.convert(target)
 
         # HaarPSI
-        l = _haarpsi(input, target, **self.kwargs)
+        l = haarpsi(input, target, **self.kwargs)
 
-        return self.reduce(l)
+        return _reduce(l, self.reduction)

@@ -9,9 +9,7 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from piqa.utils import _jit, build_reduce
-
-from typing import List
+from piqa.utils import _jit, _assert_type, _reduce
 
 
 @_jit
@@ -42,8 +40,8 @@ def mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 def psnr(
     x: torch.Tensor,
     y: torch.Tensor,
-    value_range: float = 1.,
     epsilon: float = 1e-8,
+    value_range: float = 1.,
 ) -> torch.Tensor:
     r"""Returns the PSNR between \(x\) and \(y\).
 
@@ -53,8 +51,8 @@ def psnr(
     Args:
         x: An input tensor, \((N, *)\).
         y: A target tensor, \((N, *)\).
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
         epsilon: A numerical stability term.
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
     Returns:
         The PSNR vector, \((N,)\).
@@ -99,7 +97,8 @@ class PSNR(nn.Module):
         r""""""
         super().__init__()
 
-        self.reduce = build_reduce(reduction)
+        self.reduction = reduction
+        self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
     def forward(
@@ -110,6 +109,13 @@ class PSNR(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
+        _assert_type(
+            [input, target],
+            device=input.device,
+            dim_range=(1, -1),
+            value_range=(0., self.value_range),
+        )
+
         l = psnr(input, target, **self.kwargs)
 
-        return self.reduce(l)
+        return _reduce(l, self.reduction)
