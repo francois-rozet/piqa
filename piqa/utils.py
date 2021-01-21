@@ -159,6 +159,46 @@ def gaussian_kernel(
     return kernel
 
 
+def kernel_views(kernel: torch.Tensor, n: int = 2) -> List[torch.Tensor]:
+    r"""Returns the \(N\)-dimensional views of the 1-dimensional
+    kernel `kernel`.
+
+    Args:
+        kernel: A kernel, \((C, 1, K)\).
+        n: The number of dimensions \(N\).
+
+    Returns:
+        The list of views, each \((C, 1, \underbrace{1, \dots, 1}_{i}, K,
+        \underbrace{1, \dots, 1}_{N - i - 1})\).
+
+    Example:
+        >>> kernel = gaussian_kernel(5, sigma=1.5).repeat(3, 1, 1)
+        >>> kernel.size()
+        torch.Size([3, 1, 5])
+        >>> views = kernel_views(kernel, n=2)
+        >>> views[0].size(), views[1].size()
+        (torch.Size([3, 1, 5, 1]), torch.Size([3, 1, 1, 5]))
+    """
+
+    if n == 1:
+        return [kernel]
+    elif n == 2:
+        return [kernel.unsqueeze(-1), kernel.unsqueeze(-2)]
+
+    # elif n > 2:
+    c, _, k = kernel.size()
+
+    shape: List[int] = [c, 1] + [1] * n
+    views = []
+
+    for i in range(2, n + 2):
+        shape[i] = k
+        views.append(kernel.view(shape))
+        shape[i] = 1
+
+    return views
+
+
 def haar_kernel(size: int) -> torch.Tensor:
     r"""Returns the horizontal Haar kernel.
 

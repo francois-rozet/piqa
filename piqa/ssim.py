@@ -24,7 +24,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, build_reduce, gaussian_kernel, channel_convs
+from piqa.utils import (
+    _jit,
+    build_reduce,
+    gaussian_kernel,
+    kernel_views,
+    channel_convs,
+)
 
 from typing import List, Tuple
 
@@ -58,8 +64,8 @@ def _ssim(
     In practice, SSIM and CS are averaged over the image width and height.
 
     Args:
-        x: An input tensor, \((N, C, H, W)\).
-        y: A target tensor, \((N, C, H, W)\).
+        x: An input tensor, \((N, C, H, *)\).
+        y: A target tensor, \((N, C, H, *)\).
         kernel: A smoothing kernel, \((C, 1, K)\).
             E.g. `piqa.utils.gaussian_kernel`.
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
@@ -71,8 +77,8 @@ def _ssim(
         The channel-wise SSIM and CS tensors, both \((N, C)\).
 
     Example:
-        >>> x = torch.rand(5, 3, 256, 256)
-        >>> y = torch.rand(5, 3, 256, 256)
+        >>> x = torch.rand(5, 3, 64, 64, 64)
+        >>> y = torch.rand(5, 3, 64, 64, 64)
         >>> kernel = gaussian_kernel(7).repeat(3, 1, 1)
         >>> ss, cs = _ssim(x, y, kernel)
         >>> ss.size(), cs.size()
@@ -82,7 +88,7 @@ def _ssim(
     c1 = (k1 * value_range) ** 2
     c2 = (k2 * value_range) ** 2
 
-    window = [kernel.unsqueeze(-1), kernel.unsqueeze(-2)]
+    window = kernel_views(kernel, x.dim() - 2)
 
     # Mean (mu)
     mu_x = channel_convs(x, window)
@@ -132,8 +138,8 @@ def _ms_ssim(
     the original tensors by a factor \(2^{i - 1}\).
 
     Args:
-        x: An input tensor, \((N, C, H, W)\).
-        y: A target tensor, \((N, C, H, W)\).
+        x: An input tensor, \((N, C, H, *)\).
+        y: A target tensor, \((N, C, H, *)\).
         kernel: A smoothing kernel, \((C, 1, K)\).
             E.g. `piqa.utils.gaussian_kernel`.
         weights: The weights \(\gamma_i\) of the scales, \((M,)\).
@@ -185,8 +191,8 @@ def ssim(
     r"""Returns the SSIM between \(x\) and \(y\).
 
     Args:
-        x: An input tensor, \((N, C, H, W)\).
-        y: A target tensor, \((N, C, H, W)\).
+        x: An input tensor, \((N, C, H, *)\).
+        y: A target tensor, \((N, C, H, *)\).
 
         `**kwargs` are transmitted to `SSIM`.
 
@@ -214,8 +220,8 @@ def ms_ssim(
     r"""Returns the MS-SSIM between \(x\) and \(y\).
 
     Args:
-        x: An input tensor, \((N, C, H, W)\).
-        y: A target tensor, \((N, C, H, W)\).
+        x: An input tensor, \((N, C, H, *)\).
+        y: A target tensor, \((N, C, H, *)\).
 
         `**kwargs` are transmitted to `MS_SSIM`.
 
@@ -249,8 +255,8 @@ class SSIM(nn.Module):
         `**kwargs` are transmitted to `_ssim`.
 
     Shapes:
-        * Input: \((N, C, H, W)\)
-        * Target: \((N, C, H, W)\)
+        * Input: \((N, C, H, *)\)
+        * Target: \((N, C, H, *)\)
         * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
@@ -314,8 +320,8 @@ class MS_SSIM(nn.Module):
         `**kwargs` are transmitted to `_ms_ssim`.
 
     Shapes:
-        * Input: \((N, C, H, W)\)
-        * Target: \((N, C, H, W)\)
+        * Input: \((N, C, H, *)\)
+        * Target: \((N, C, H, *)\)
         * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
