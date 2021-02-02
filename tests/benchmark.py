@@ -43,13 +43,13 @@ METRICS = {
         'piqa.TV': piqa.TV(),
     }),
     'PSNR': (2, {
-        'sk.psnr': sk.peak_signal_noise_ratio,
+        'sk.psnr-np': sk.peak_signal_noise_ratio,
         'piq.psnr': piq.psnr,
         'kornia.PSNR': kornia.PSNRLoss(max_val=1.),
         'piqa.PSNR': piqa.PSNR(),
     }),
     'SSIM': (2, {
-        'sk.ssim': lambda x, y: sk.structural_similarity(
+        'sk.ssim-np': lambda x, y: sk.structural_similarity(
             x, y,
             win_size=11,
             multichannel=True,
@@ -74,7 +74,7 @@ METRICS = {
     }),
     'LPIPS': (2, {
         'piq.LPIPS': piq.LPIPS(),
-        'IQA.LPIPS': IQA.LPIPSvgg(),
+        # 'IQA.LPIPS': IQA.LPIPSvgg(),
         'piqa.LPIPS': piqa.LPIPS(network='vgg')
     }),
     'GMSD': (2, {
@@ -101,22 +101,31 @@ METRICS = {
 }
 
 
-def timeit(f, n: int) -> (float, float):
-    cuda_start = torch.cuda.Event(enable_timing=True)
-    cuda_end = torch.cuda.Event(enable_timing=True)
-
+def timeit(f, n: int) -> float:
     start = time.perf_counter()
-    cuda_start.record()
 
     for _ in range(n):
         f()
 
-    cuda_end.record()
     end = time.perf_counter()
+
+    return (end - start) * 1000
+
+
+def cuda_timeit(f, n: int) -> float:
+    start = torch.cuda.Event(enable_timing=True)
+    end = torch.cuda.Event(enable_timing=True)
+
+    start.record()
+
+    for _ in range(n):
+        f()
+
+    end.record()
 
     torch.cuda.synchronize()
 
-    return cuda_start.elapsed_time(cuda_end) / 1000, end - start
+    return start.elapsed_time(end)
 
 
 def main(
@@ -129,9 +138,14 @@ def main(
     grad: bool = True,
     backend: bool = True,
 ):
+    # Device
+    if not torch.cuda.is_available():
+        device = 'cpu'
+
     # Backend
-    torch.backends.cudnn.enabled = backend
-    torch.backends.cudnn.benchmark = backend
+    if device == 'cuda':
+        torch.backends.cudnn.enabled = backend
+        torch.backends.cudnn.benchmark = backend
 
     # Images
     truth = Image.open(request.urlopen(url))
@@ -164,8 +178,7 @@ def main(
         data = {
             'method': [],
             'value': [],
-            'time-sync': [],
-            'time-async': []
+            'time': []
         }
 
         with contextlib.nullcontext() if grad else torch.no_grad():
@@ -173,7 +186,7 @@ def main(
                 if hasattr(method, 'to'):
                     method.to(x.device)
 
-                if key.startswith('sk.'):
+                if '-np' in key:
                     a, b = truth, noisy
                 else:
                     a, b = x, y
@@ -183,33 +196,31 @@ def main(
                 else:
                     f = lambda: method(a, b).mean()
 
-                if key.endswith('-loss'):
-                    key = key.replace('-loss', '')
+                if '-loss' in key:
                     g = lambda: 1. - f()
-                elif key.endswith('-halfloss'):
-                    key = key.replace('-halfloss', '')
+                elif '-halfloss' in key:
                     g = lambda: 1. - 2. * f()
                 else:
                     g = f
 
-                data['method'].append(key)
+                if '-' in key:
+                    base = key[:key.find('-')]
+                else:
+                    base = key
+
+                data['method'].append(base)
                 data['value'].append(float(g()))
 
-                if key.startswith('sk.'):
-                    data['time-sync'].append(-1.)
-                    data['time-async'].append(-1.)
-                    continue
+                time = timeit(g, n=warm) / warm
 
-                _ = timeit(g, n=warm)  # activate JIT
+                if device == 'cuda' and '-np' not in key:
+                    time = cuda_timeit(g, n=loops) / loops
 
-                t_sync, t_async = timeit(g, n=loops)
-
-                data['time-sync'].append(t_sync)
-                data['time-async'].append(t_async)
+                data['time'].append(time)
 
         df = pd.DataFrame(data)
 
-        print(df.sort_values(by='time-sync', ignore_index=True))
+        print(df.sort_values(by='time', ignore_index=True))
         print()
 
 
