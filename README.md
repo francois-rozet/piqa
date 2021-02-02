@@ -8,7 +8,7 @@ The `piqa` package is a collection of measures and metrics for image quality ass
 
 PIQA is directly inspired from the [`piq`](https://github.com/photosynthesis-team/piq) project, but focuses on the conciseness, readability and understandability of its (sub-)modules, such that anyone can easily reuse and/or adapt them to its needs.
 
-However, conciseness should never be at the expense of efficency; PIQA's implementations are up to 3 times faster than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
+However, conciseness should never be at the expense of efficiency; PIQA's implementations are up to 3 times faster than those of other IQA PyTorch packages like [`kornia`](https://github.com/kornia/kornia), [`piq`](https://github.com/photosynthesis-team/piq) and [`IQA-pytorch`](https://github.com/dingkeyan93/IQA-optimization).
 
 > PIQA should be pronounced *pika* (like Pikachu ⚡️)
 
@@ -20,7 +20,7 @@ The `piqa` package is available on [PyPI](https://pypi.org/project/piqa/), which
 pip install piqa
 ```
 
-Alternatively, if you need the lastest features, you can install it using
+Alternatively, if you need the latest features, you can install it using
 
 ```bash
 git clone https://github.com/francois-rozet/piqa
@@ -93,7 +93,7 @@ l = ssim(x, y, kernel=kernel, channel_avg=False)
 | MS-SSIM | `MS_SSIM` | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
 | LPIPS   | `LPIPS`   | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
 | GMSD    | `GMSD`    | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
-| MS-GMSD | `MS_GMSD` | 2017 | [Multi-Scale Gradient Magnitude Similiarity Deviation](https://ieeexplore.ieee.org/document/7952357) |
+| MS-GMSD | `MS_GMSD` | 2017 | [Multi-Scale Gradient Magnitude Similarity Deviation](https://ieeexplore.ieee.org/document/7952357) |
 | MDSI    | `MDSI`    | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
 | HaarPSI | `HaarPSI` | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
 

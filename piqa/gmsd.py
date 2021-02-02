@@ -1,5 +1,5 @@
 r"""Gradient Magnitude Similarity Deviation (GMSD)
-and Multi-Scale Gradient Magnitude Similiarity Deviation (MS-GMSD)
+and Multi-Scale Gradient Magnitude Similarity Deviation (MS-GMSD)
 
 This module implements the GMSD and MS-GMSD in PyTorch.
 
