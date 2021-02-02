@@ -23,17 +23,14 @@ pip install piqa
 Alternatively, if you need the latest features, you can install it using
 
 ```bash
-git clone https://github.com/francois-rozet/piqa
-cd piqa
-python setup.py install
+pip install git+https://github.com/francois-rozet/piqa
 ```
 
 or copy the package directly to your project, with
 
 ```bash
 git clone https://github.com/francois-rozet/piqa
-cd piqa
-cp -R piqa <path/to/project>/piqa
+cp -R piqa/piqa <path/to/project>/piqa
 ```
 
 ## Documentation
