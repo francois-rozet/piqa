@@ -5,7 +5,7 @@ source ~/piqa/bin/activate
 git checkout master
 
 # Generate HTML
-PIQA_JIT=0 pdoc piqa --html --force \
+pdoc piqa --html --force \
     --config "git_link_template='https://github.com/francois-rozet/piqa/blob/{commit}/{path}#L{start_line}-L{end_line}'" \
     --config "show_inherited_members=True" \
     --config "latex_math=True"
