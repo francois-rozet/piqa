@@ -101,24 +101,24 @@ l = ssim(x, y, kernel=kernel, channel_avg=False)
 
 Most functional components of `piqa` support  PyTorch's JIT, *i.e.* [TorchScript](https://pytorch.org/docs/stable/jit.html), which is a way to create serializable and optimizable functions from PyTorch code.
 
-By default, jitting is enabled for those components. To disable it, the `PIQA_JIT` environment variable has to be set to `0`. To do so temporarily,
+By default, jitting is disabled for those components. To enable it, the `PIQA_JIT` environment variable has to be set to `1`. To do so temporarily,
 
 * UNIX-like `bash`
 
 ```bash
-export PIQA_JIT=0
+export PIQA_JIT=1
 ```
 
 * Windows `cmd`
 
 ```cmd
-set PIQA_JIT=0
+set PIQA_JIT=1
 ```
 
 * Microsoft `PowerShell`
 
 ```powershell
-$env:PIQA_JIT=0
+$env:PIQA_JIT=1
 ```
 
 ### Assert

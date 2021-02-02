@@ -7,10 +7,10 @@ import torch
 from typing import List, Tuple
 
 
-if os.getenv('PIQA_JIT') == '0':
-    _jit = lambda f: f
-else:
+if os.getenv('PIQA_JIT') == '1':
     _jit = torch.jit.script
+else:
+    _jit = lambda f: f
 
 
 def _debug(mode: bool = __debug__) -> bool:
