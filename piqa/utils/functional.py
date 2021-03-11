@@ -82,10 +82,13 @@ def gaussian_kernel(
 ) -> torch.Tensor:
     r"""Returns the 1-dimensional Gaussian kernel of size \(K\).
 
-    $$ G(x) = \frac{1}{\sum_{y = 1}^{K} G(y)} \exp
+    $$ G(x) = \gamma \exp
         \left(\frac{(x - \mu)^2}{2 \sigma^2}\right) $$
 
-    where \(x \in [1; K]\) is a position in the kernel
+    where \(\gamma\) is such that
+
+    $$ \sum_{x = 1}^{K} G(x) = 1 $$
+
     and \(\mu = \frac{1 + K}{2}\).
 
     Args:
@@ -263,124 +266,3 @@ def gradient_kernel(kernel: torch.Tensor) -> torch.Tensor:
     """
 
     return torch.stack([kernel, kernel.t()]).unsqueeze(1)
-
-
-def tensor_norm(
-    x: torch.Tensor,
-    dim: List[int],  # Union[int, Tuple[int, ...]] = ()
-    keepdim: bool = False,
-    norm: str = 'L2',
-) -> torch.Tensor:
-    r"""Returns the norm of \(x\).
-
-    $$ L_1(x) = \left\| x \right\|_1 = \sum_i \left| x_i \right| $$
-
-    $$ L_2(x) = \left\| x \right\|_2 = \left( \sum_i x^2_i \right)^\frac{1}{2} $$
-
-    Args:
-        x: A tensor, \((*,)\).
-        dim: The dimension(s) along which to calculate the norm.
-        keepdim: Whether the output tensor has `dim` retained or not.
-        norm: Specifies the norm funcion to apply:
-            `'L1'` | `'L2'` | `'L2_squared'`.
-
-    Wikipedia:
-        https://en.wikipedia.org/wiki/Norm_(mathematics)
-
-    Example:
-        >>> x = torch.arange(9).float().view(3, 3)
-        >>> x
-        tensor([[0., 1., 2.],
-                [3., 4., 5.],
-                [6., 7., 8.]])
-        >>> tensor_norm(x, dim=0)
-        tensor([6.7082, 8.1240, 9.6437])
-    """
-
-    if norm == 'L1':
-        x = x.abs()
-    else:  # norm in ['L2', 'L2_squared']
-        x = x ** 2
-
-    x = x.sum(dim=dim, keepdim=keepdim)
-
-    if norm == 'L2':
-        x = x.sqrt()
-
-    return x
-
-
-def normalize_tensor(
-    x: torch.Tensor,
-    dim: List[int],  # Union[int, Tuple[int, ...]] = ()
-    norm: str = 'L2',
-    epsilon: float = 1e-8,
-) -> torch.Tensor:
-    r"""Returns \(x\) normalized.
-
-    $$ \hat{x} = \frac{x}{\left\|x\right\|} $$
-
-    Args:
-        x: A tensor, \((*,)\).
-        dim: The dimension(s) along which to normalize.
-        norm: Specifies the norm funcion to use:
-            `'L1'` | `'L2'` | `'L2_squared'`.
-        epsilon: A numerical stability term.
-
-    Returns:
-        The normalized tensor, \((*,)\).
-
-    Example:
-        >>> x = torch.arange(9, dtype=torch.float).view(3, 3)
-        >>> x
-        tensor([[0., 1., 2.],
-                [3., 4., 5.],
-                [6., 7., 8.]])
-        >>> normalize_tensor(x, dim=0)
-        tensor([[0.0000, 0.1231, 0.2074],
-                [0.4472, 0.4924, 0.5185],
-                [0.8944, 0.8616, 0.8296]])
-    """
-
-    norm = tensor_norm(x, dim=dim, keepdim=True, norm=norm)
-
-    return x / (norm + epsilon)
-
-
-def unravel_index(
-    indices: torch.LongTensor,
-    shape: List[int],
-) -> torch.LongTensor:
-    r"""Converts flat indices into unraveled coordinates in a target shape.
-
-    This is a `torch` implementation of `numpy.unravel_index`.
-
-    Args:
-        indices: A tensor of (flat) indices, \((*, N)\).
-        shape: The targeted shape, \((D,)\).
-
-    Returns:
-        The unraveled coordinates, \((*, N, D)\).
-
-    Example:
-        >>> unravel_index(torch.arange(9), shape=(3, 3))
-        tensor([[0, 0],
-                [0, 1],
-                [0, 2],
-                [1, 0],
-                [1, 1],
-                [1, 2],
-                [2, 0],
-                [2, 1],
-                [2, 2]])
-    """
-
-    coord = []
-
-    for dim in reversed(shape):
-        coord.append(indices % dim)
-        indices = indices // dim
-
-    coord = torch.stack(coord[::-1], dim=-1)
-
-    return coord

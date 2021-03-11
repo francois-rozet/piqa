@@ -25,7 +25,6 @@ from piqa.utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
-    tensor_norm,
 )
 
 
@@ -77,8 +76,8 @@ def gmsd(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = tensor_norm(channel_conv(x, kernel, padding=pad), dim=[1])
-    gm_y = tensor_norm(channel_conv(y, kernel, padding=pad), dim=[1])
+    gm_x = torch.linalg.norm(channel_conv(x, kernel, padding=pad), dim=1)
+    gm_y = torch.linalg.norm(channel_conv(y, kernel, padding=pad), dim=1)
 
     gm_xy = gm_x * gm_y
 

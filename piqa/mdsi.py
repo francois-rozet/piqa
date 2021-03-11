@@ -19,7 +19,6 @@ from piqa.utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
-    tensor_norm,
 )
 
 import piqa.utils.complex as cx
@@ -77,11 +76,11 @@ def mdsi(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = tensor_norm(channel_conv(l_x, kernel, padding=pad), dim=[1])
-    gm_y = tensor_norm(channel_conv(l_y, kernel, padding=pad), dim=[1])
-    gm_avg = tensor_norm(
+    gm_x = torch.linalg.norm(channel_conv(l_x, kernel, padding=pad), dim=1)
+    gm_y = torch.linalg.norm(channel_conv(l_y, kernel, padding=pad), dim=1)
+    gm_avg = torch.linalg.norm(
         channel_conv((l_x + l_y) / 2., kernel, padding=pad),
-        dim=[1],
+        dim=1,
     )
 
     gm_x_sq, gm_y_sq, gm_avg_sq = gm_x ** 2, gm_y ** 2, gm_avg ** 2

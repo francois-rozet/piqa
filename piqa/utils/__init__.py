@@ -85,10 +85,12 @@ def _assert_type(
             )
 
 
+@_jit
 def _reduce(x: torch.Tensor, reduction: str = 'mean') -> torch.Tensor:
-    r"""Returns a reducing module.
+    r"""Returns the reduction of \(x\).
 
     Args:
+        x: A tensor, \((*,)\).
         reduction: Specifies the reduction type:
             `'none'` | `'mean'` | `'sum'`.
 

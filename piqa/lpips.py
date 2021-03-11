@@ -19,7 +19,6 @@ import torchvision.models as models
 import torch.hub as hub
 
 from piqa.utils import _jit, _assert_type, _reduce
-from piqa.utils.functional import normalize_tensor
 
 from typing import Dict, List
 
@@ -225,8 +224,8 @@ class LPIPS(nn.Module):
         residuals = []
 
         for lin, fx, fy in zip(self.lins, self.net(input), self.net(target)):
-            fx = normalize_tensor(fx, dim=[1], norm='L2')
-            fy = normalize_tensor(fy, dim=[1], norm='L2')
+            fx = fx / torch.linalg.norm(fx, dim=1, keepdim=True)
+            fy = fy / torch.linalg.norm(fy, dim=1, keepdim=True)
 
             mse = ((fx - fy) ** 2).mean(dim=(-1, -2), keepdim=True)
             residuals.append(lin(mse).flatten())

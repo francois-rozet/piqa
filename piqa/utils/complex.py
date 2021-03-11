@@ -70,7 +70,7 @@ def mod(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
         tensor([2.0000, 1.0000])
     """
 
-    x = (x ** 2).sum(dim=-1)
+    x = x.square().sum(dim=-1)
 
     if not squared:
         x = torch.sqrt(x)
