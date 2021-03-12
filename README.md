@@ -57,7 +57,7 @@ l = psnr(x, y)
 from piqa import SSIM
 
 x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
-y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+y = torch.rand(5, 3, 256, 256).cuda()
 
 ssim = SSIM().cuda()
 l = ssim(x, y)

@@ -179,7 +179,7 @@ class GMSD(nn.Module):
     Example:
         >>> criterion = GMSD().cuda()
         >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
-        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
@@ -260,7 +260,7 @@ class MS_GMSD(nn.Module):
     Example:
         >>> criterion = MS_GMSD().cuda()
         >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
-        >>> y = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> y = torch.rand(5, 3, 256, 256).cuda()
         >>> l = criterion(x, y)
         >>> l.size()
         torch.Size([])
