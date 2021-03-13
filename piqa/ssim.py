@@ -59,6 +59,10 @@ def ssim(
     In practice, SSIM and CS are averaged over the spatial dimensions.
     If `channel_avg` is `True`, they are also averaged over the channels.
 
+    Note:
+        The number of spatial dimensions is not limited to 2. You can apply
+        `ssim` (and `SSIM`) on images with 3, or even more, dimensions.
+
     Args:
         x: An input tensor, \((N, C, H, *)\).
         y: A target tensor, \((N, C, H, *)\).
@@ -135,8 +139,8 @@ def ms_ssim(
     the original tensors by a factor \(2^{i - 1}\).
 
     Args:
-        x: An input tensor, \((N, C, H, *)\).
-        y: A target tensor, \((N, C, H, *)\).
+        x: An input tensor, \((N, C, H, W)\).
+        y: A target tensor, \((N, C, H, W)\).
         kernel: A smoothing kernel, \((C, 1, K)\).
             E.g. `piqa.utils.functional.gaussian_kernel`.
         weights: The weights \(\gamma_i\) of the scales, \((M,)\).
@@ -264,8 +268,8 @@ class MS_SSIM(nn.Module):
         `**kwargs` are transmitted to `ms_ssim`.
 
     Shapes:
-        * Input: \((N, C, H, *)\)
-        * Target: \((N, C, H, *)\)
+        * Input: \((N, C, H, W)\)
+        * Target: \((N, C, H, W)\)
         * Output: \((N,)\) or \(()\) depending on `reduction`
 
     Example:
@@ -318,7 +322,7 @@ class MS_SSIM(nn.Module):
         _assert_type(
             [input, target],
             device=self.kernel.device,
-            dim_range=(3, -1),
+            dim_range=(4, 4),
             n_channels=self.kernel.size(0),
             value_range=(0., self.value_range),
         )
