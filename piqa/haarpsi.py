@@ -140,7 +140,7 @@ class HaarPSI(nn.Module):
         >>> criterion = HaarPSI().cuda()
         >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
         >>> y = torch.rand(5, 3, 256, 256).cuda()
-        >>> l = criterion(x, y)
+        >>> l = 1 - criterion(x, y)
         >>> l.size()
         torch.Size([])
         >>> l.backward()
