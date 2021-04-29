@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>piqa.gmsd API documentation</title>
+<meta name="description" content="Gradient Magnitude Similarity Deviation (GMSD)
+and Multi-Scale Gradient Magnitude Similarity Deviation (MS-GMSD) …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>piqa.gmsd</code></h1>
+</header>
+<section id="section-intro">
+<p>Gradient Magnitude Similarity Deviation (GMSD)
+and Multi-Scale Gradient Magnitude Similarity Deviation (MS-GMSD)</p>
+<p>This module implements the GMSD and MS-GMSD in PyTorch.</p>
+<h2 id="references">References</h2>
+<p>[1] Gradient Magnitude Similarity Deviation:
+An Highly Efficient Perceptual Image Quality Index
+(Xue et al., 2013)
+<a href="https://arxiv.org/abs/1308.3052">https://arxiv.org/abs/1308.3052</a></p>
+<p>[2] Gradient Magnitude Similarity Deviation on
+multiple scales for color image quality assessment
+(Zhang et al., 2017)
+<a href="https://ieeexplore.ieee.org/document/7952357">https://ieeexplore.ieee.org/document/7952357</a></p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L0-L326" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">r&#34;&#34;&#34;Gradient Magnitude Similarity Deviation (GMSD)
+and Multi-Scale Gradient Magnitude Similarity Deviation (MS-GMSD)
+
+This module implements the GMSD and MS-GMSD in PyTorch.
+
+References:
+    [1] Gradient Magnitude Similarity Deviation:
+    An Highly Efficient Perceptual Image Quality Index
+    (Xue et al., 2013)
+    https://arxiv.org/abs/1308.3052
+
+    [2] Gradient Magnitude Similarity Deviation on
+    multiple scales for color image quality assessment
+    (Zhang et al., 2017)
+    https://ieeexplore.ieee.org/document/7952357
+&#34;&#34;&#34;
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils.color import get_conv
+from piqa.utils.functional import (
+    prewitt_kernel,
+    gradient_kernel,
+    channel_conv,
+)
+
+
+@_jit
+def gmsd(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    kernel: torch.Tensor,
+    value_range: float = 1.,
+    c: float = 170. / (255. ** 2),
+    alpha: float = 0.,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Returns the GMSD between \(x\) and \(y\),
+    without color space conversion and downsampling.
+
+    \(\text{GMSD}(x, y)\) is the standard deviation of the Gradient
+    Magnitude Similarity (GMS).
+
+    $$ \text{GMS}(x, y) = \frac{(2 - \alpha) \text{GM}(x) \text{GM}(y)
+        + C}{\text{GM}(x)^2 + \text{GM}(y)^2 - \alpha \text{GM}(x)
+        \text{GM}(y) + C} $$
+
+    $$ \text{GM}(z) = \left\| \nabla z \right\|_2 $$
+
+    where \(\nabla z\) is the result of a gradient convolution over \(z\).
+
+    Args:
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+
+        For the remaining arguments, refer to [1].
+
+    Returns:
+        The GMSD vector, \((N,)\).
+
+    Example:
+        &gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+        &gt;&gt;&gt; l = gmsd(x, y, kernel)
+        &gt;&gt;&gt; l.size()
+        torch.Size([5])
+    &#34;&#34;&#34;
+
+    c *= value_range ** 2
+
+    # Gradient magnitude
+    pad = kernel.size(-1) // 2
+
+    gm_x = torch.linalg.norm(channel_conv(x, kernel, padding=pad), dim=1)
+    gm_y = torch.linalg.norm(channel_conv(y, kernel, padding=pad), dim=1)
+
+    gm_xy = gm_x * gm_y
+
+    # Gradient magnitude similarity
+    gms_num = (2. - alpha) * gm_xy + c
+    gms_den = gm_x ** 2 + gm_y ** 2 + c
+
+    if alpha &gt; 0.:
+        gms_den = gms_den - alpha * gm_xy
+
+    gms = gms_num / gms_den
+
+    # Gradient magnitude similarity deviation
+    gmsd = torch.std(gms, dim=(-1, -2))
+
+    return gmsd
+
+
+@_jit
+def ms_gmsd(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    kernel: torch.Tensor,
+    weights: torch.Tensor,
+    value_range: float = 1.,
+    c: float = 170. / (255. ** 2),
+    alpha: float = 0.5,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Returns the MS-GMSD between \(x\) and \(y\),
+    without color space conversion.
+
+    $$ \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1}
+        w_i \text{GMSD}(x^i, y^i) $$
+
+    where \(x^i\) and \(y^i\) are obtained by downsampling
+    the original tensors by a factor \(2^{i - 1}\).
+
+    Args:
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        weights: The weights \(w_i\) of the scales, \((M,)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+
+        For the remaining arguments, refer to [2].
+
+    Returns:
+        The MS-GMSD vector, \((N,)\).
+
+    Example:
+        &gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+        &gt;&gt;&gt; weights = torch.rand(4)
+        &gt;&gt;&gt; l = ms_gmsd(x, y, kernel, weights)
+        &gt;&gt;&gt; l.size()
+        torch.Size([5])
+    &#34;&#34;&#34;
+
+    gmsds = []
+
+    for i in range(weights.numel()):
+        if i &gt; 0:
+            x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
+            y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
+
+        gmsds.append(gmsd(
+            x, y, kernel,
+            value_range=value_range,
+            c=c, alpha=alpha,
+        ))
+
+    msgmsd = torch.stack(gmsds, dim=-1) ** 2
+    msgmsd = torch.sqrt((msgmsd * weights).sum(dim=-1))
+
+    return msgmsd
+
+
+class GMSD(nn.Module):
+    r&#34;&#34;&#34;Creates a criterion that measures the GMSD
+    between an input and a target.
+
+    Before applying `gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space, and downsampled by a factor 2.
+
+    Args:
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+            If `None`, use the Prewitt kernel instead.
+        reduction: Specifies the reduction to apply to the output:
+            `&#39;none&#39;` | `&#39;mean&#39;` | `&#39;sum&#39;`.
+
+        `**kwargs` are transmitted to `gmsd`.
+
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
+
+    Example:
+        &gt;&gt;&gt; criterion = GMSD().cuda()
+        &gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        &gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+        &gt;&gt;&gt; l = criterion(x, y)
+        &gt;&gt;&gt; l.size()
+        torch.Size([])
+        &gt;&gt;&gt; l.backward()
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        kernel: torch.Tensor = None,
+        reduction: str = &#39;mean&#39;,
+        **kwargs,
+    ):
+        r&#34;&#34;&#34;&#34;&#34;&#34;
+        super().__init__()
+
+        if kernel is None:
+            kernel = gradient_kernel(prewitt_kernel())
+
+        self.register_buffer(&#39;kernel&#39;, kernel)
+
+        self.convert = get_conv(&#39;RGB&#39;, &#39;Y&#39;)
+        self.reduction = reduction
+        self.value_range = kwargs.get(&#39;value_range&#39;, 1.)
+        self.kwargs = kwargs
+
+    def forward(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+    ) -&gt; torch.Tensor:
+        r&#34;&#34;&#34;Defines the computation performed at every call.
+        &#34;&#34;&#34;
+
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
+        # Downsample
+        input = F.avg_pool2d(input, 2, ceil_mode=True)
+        target = F.avg_pool2d(target, 2, ceil_mode=True)
+
+        # RGB to Y
+        input = self.convert(input)
+        target = self.convert(target)
+
+        # GMSD
+        l = gmsd(input, target, kernel=self.kernel, **self.kwargs)
+
+        return _reduce(l, self.reduction)
+
+
+class MS_GMSD(nn.Module):
+    r&#34;&#34;&#34;Creates a criterion that measures the MS-GMSD
+    between an input and a target.
+
+    Before applying `ms_gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space.
+
+    Args:
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+            If `None`, use the Prewitt kernel instead.
+        weights: The weights of the scales, \((M,)\).
+            If `None`, use the `MS_GMSD.OFFICIAL_WEIGHTS` instead.
+        reduction: Specifies the reduction to apply to the output:
+            `&#39;none&#39;` | `&#39;mean&#39;` | `&#39;sum&#39;`.
+
+        `**kwargs` are transmitted to `ms_gmsd`.
+
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
+
+    Example:
+        &gt;&gt;&gt; criterion = MS_GMSD().cuda()
+        &gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        &gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+        &gt;&gt;&gt; l = criterion(x, y)
+        &gt;&gt;&gt; l.size()
+        torch.Size([])
+        &gt;&gt;&gt; l.backward()
+    &#34;&#34;&#34;
+
+    OFFICIAL_WEIGHTS: torch.Tensor = torch.tensor(
+        [0.096, 0.596, 0.289, 0.019]
+    )
+
+    def __init__(
+        self,
+        kernel: torch.Tensor = None,
+        weights: torch.Tensor = None,
+        reduction: str = &#39;mean&#39;,
+        **kwargs,
+    ):
+        r&#34;&#34;&#34;&#34;&#34;&#34;
+        super().__init__()
+
+        if kernel is None:
+            kernel = gradient_kernel(prewitt_kernel())
+
+        if weights is None:
+            weights = self.OFFICIAL_WEIGHTS
+
+        self.register_buffer(&#39;kernel&#39;, kernel)
+        self.register_buffer(&#39;weights&#39;, weights)
+
+        self.convert = get_conv(&#39;RGB&#39;, &#39;Y&#39;)
+        self.reduction = reduction
+        self.value_range = kwargs.get(&#39;value_range&#39;, 1.)
+        self.kwargs = kwargs
+
+    def forward(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+    ) -&gt; torch.Tensor:
+        r&#34;&#34;&#34;Defines the computation performed at every call.
+        &#34;&#34;&#34;
+
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
+        # RGB to Y
+        input = self.convert(input)
+        target = self.convert(target)
+
+        # MS-GMSD
+        l = ms_gmsd(
+            input,
+            target,
+            kernel=self.kernel,
+            weights=self.weights,
+            **self.kwargs,
+        )
+
+        return _reduce(l, self.reduction)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="piqa.gmsd.gmsd"><code class="name flex">
+<span>def <span class="ident">gmsd</span></span>(<span>x: torch.Tensor, y: torch.Tensor, kernel: torch.Tensor, value_range: float = 1.0, c: float = 0.00261437908496732, alpha: float = 0.0) ‑> torch.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the GMSD between <span><span class="MathJax_Preview">x</span><script type="math/tex">x</script></span> and <span><span class="MathJax_Preview">y</span><script type="math/tex">y</script></span>,
+without color space conversion and downsampling.</p>
+<p><span><span class="MathJax_Preview">\text{GMSD}(x, y)</span><script type="math/tex">\text{GMSD}(x, y)</script></span> is the standard deviation of the Gradient
+Magnitude Similarity (GMS).</p>
+<p><span><span class="MathJax_Preview"> \text{GMS}(x, y) = \frac{(2 - \alpha) \text{GM}(x) \text{GM}(y)
++ C}{\text{GM}(x)^2 + \text{GM}(y)^2 - \alpha \text{GM}(x)
+\text{GM}(y) + C} </span><script type="math/tex; mode=display"> \text{GMS}(x, y) = \frac{(2 - \alpha) \text{GM}(x) \text{GM}(y)
++ C}{\text{GM}(x)^2 + \text{GM}(y)^2 - \alpha \text{GM}(x)
+\text{GM}(y) + C} </script></span></p>
+<p><span><span class="MathJax_Preview"> \text{GM}(z) = \left\| \nabla z \right\|_2 </span><script type="math/tex; mode=display"> \text{GM}(z) = \left\| \nabla z \right\|_2 </script></span></p>
+<p>where <span><span class="MathJax_Preview">\nabla z</span><script type="math/tex">\nabla z</script></span> is the result of a gradient convolution over <span><span class="MathJax_Preview">z</span><script type="math/tex">z</script></span>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>x</code></strong></dt>
+<dd>An input tensor, <span><span class="MathJax_Preview">(N, 1, H, W)</span><script type="math/tex">(N, 1, H, W)</script></span>.</dd>
+<dt><strong><code>y</code></strong></dt>
+<dd>A target tensor, <span><span class="MathJax_Preview">(N, 1, H, W)</span><script type="math/tex">(N, 1, H, W)</script></span>.</dd>
+<dt><strong><code>kernel</code></strong></dt>
+<dd>A gradient kernel, <span><span class="MathJax_Preview">(2, 1, K, K)</span><script type="math/tex">(2, 1, K, K)</script></span>.</dd>
+<dt><strong><code>value_range</code></strong></dt>
+<dd>The value range <span><span class="MathJax_Preview">L</span><script type="math/tex">L</script></span> of the inputs (usually 1. or 255).</dd>
+</dl>
+<p>For the remaining arguments, refer to [1].</p>
+<h2 id="returns">Returns</h2>
+<p>The GMSD vector, <span><span class="MathJax_Preview">(N,)</span><script type="math/tex">(N,)</script></span>.</p>
+<h2 id="example">Example</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+&gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+&gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+&gt;&gt;&gt; l = gmsd(x, y, kernel)
+&gt;&gt;&gt; l.size()
+torch.Size([5])
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L31-L96" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">@_jit
+def gmsd(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    kernel: torch.Tensor,
+    value_range: float = 1.,
+    c: float = 170. / (255. ** 2),
+    alpha: float = 0.,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Returns the GMSD between \(x\) and \(y\),
+    without color space conversion and downsampling.
+
+    \(\text{GMSD}(x, y)\) is the standard deviation of the Gradient
+    Magnitude Similarity (GMS).
+
+    $$ \text{GMS}(x, y) = \frac{(2 - \alpha) \text{GM}(x) \text{GM}(y)
+        + C}{\text{GM}(x)^2 + \text{GM}(y)^2 - \alpha \text{GM}(x)
+        \text{GM}(y) + C} $$
+
+    $$ \text{GM}(z) = \left\| \nabla z \right\|_2 $$
+
+    where \(\nabla z\) is the result of a gradient convolution over \(z\).
+
+    Args:
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+
+        For the remaining arguments, refer to [1].
+
+    Returns:
+        The GMSD vector, \((N,)\).
+
+    Example:
+        &gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+        &gt;&gt;&gt; l = gmsd(x, y, kernel)
+        &gt;&gt;&gt; l.size()
+        torch.Size([5])
+    &#34;&#34;&#34;
+
+    c *= value_range ** 2
+
+    # Gradient magnitude
+    pad = kernel.size(-1) // 2
+
+    gm_x = torch.linalg.norm(channel_conv(x, kernel, padding=pad), dim=1)
+    gm_y = torch.linalg.norm(channel_conv(y, kernel, padding=pad), dim=1)
+
+    gm_xy = gm_x * gm_y
+
+    # Gradient magnitude similarity
+    gms_num = (2. - alpha) * gm_xy + c
+    gms_den = gm_x ** 2 + gm_y ** 2 + c
+
+    if alpha &gt; 0.:
+        gms_den = gms_den - alpha * gm_xy
+
+    gms = gms_num / gms_den
+
+    # Gradient magnitude similarity deviation
+    gmsd = torch.std(gms, dim=(-1, -2))
+
+    return gmsd</code></pre>
+</details>
+</dd>
+<dt id="piqa.gmsd.ms_gmsd"><code class="name flex">
+<span>def <span class="ident">ms_gmsd</span></span>(<span>x: torch.Tensor, y: torch.Tensor, kernel: torch.Tensor, weights: torch.Tensor, value_range: float = 1.0, c: float = 0.00261437908496732, alpha: float = 0.5) ‑> torch.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the MS-GMSD between <span><span class="MathJax_Preview">x</span><script type="math/tex">x</script></span> and <span><span class="MathJax_Preview">y</span><script type="math/tex">y</script></span>,
+without color space conversion.</p>
+<p><span><span class="MathJax_Preview"> \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1}
+w_i \text{GMSD}(x^i, y^i) </span><script type="math/tex; mode=display"> \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1}
+w_i \text{GMSD}(x^i, y^i) </script></span></p>
+<p>where <span><span class="MathJax_Preview">x^i</span><script type="math/tex">x^i</script></span> and <span><span class="MathJax_Preview">y^i</span><script type="math/tex">y^i</script></span> are obtained by downsampling
+the original tensors by a factor <span><span class="MathJax_Preview">2^{i - 1}</span><script type="math/tex">2^{i - 1}</script></span>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>x</code></strong></dt>
+<dd>An input tensor, <span><span class="MathJax_Preview">(N, 1, H, W)</span><script type="math/tex">(N, 1, H, W)</script></span>.</dd>
+<dt><strong><code>y</code></strong></dt>
+<dd>A target tensor, <span><span class="MathJax_Preview">(N, 1, H, W)</span><script type="math/tex">(N, 1, H, W)</script></span>.</dd>
+<dt><strong><code>kernel</code></strong></dt>
+<dd>A gradient kernel, <span><span class="MathJax_Preview">(2, 1, K, K)</span><script type="math/tex">(2, 1, K, K)</script></span>.</dd>
+<dt><strong><code>weights</code></strong></dt>
+<dd>The weights <span><span class="MathJax_Preview">w_i</span><script type="math/tex">w_i</script></span> of the scales, <span><span class="MathJax_Preview">(M,)</span><script type="math/tex">(M,)</script></span>.</dd>
+<dt><strong><code>value_range</code></strong></dt>
+<dd>The value range <span><span class="MathJax_Preview">L</span><script type="math/tex">L</script></span> of the inputs (usually 1. or 255).</dd>
+</dl>
+<p>For the remaining arguments, refer to [2].</p>
+<h2 id="returns">Returns</h2>
+<p>The MS-GMSD vector, <span><span class="MathJax_Preview">(N,)</span><script type="math/tex">(N,)</script></span>.</p>
+<h2 id="example">Example</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+&gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+&gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+&gt;&gt;&gt; weights = torch.rand(4)
+&gt;&gt;&gt; l = ms_gmsd(x, y, kernel, weights)
+&gt;&gt;&gt; l.size()
+torch.Size([5])
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L99-L156" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">@_jit
+def ms_gmsd(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    kernel: torch.Tensor,
+    weights: torch.Tensor,
+    value_range: float = 1.,
+    c: float = 170. / (255. ** 2),
+    alpha: float = 0.5,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Returns the MS-GMSD between \(x\) and \(y\),
+    without color space conversion.
+
+    $$ \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1}
+        w_i \text{GMSD}(x^i, y^i) $$
+
+    where \(x^i\) and \(y^i\) are obtained by downsampling
+    the original tensors by a factor \(2^{i - 1}\).
+
+    Args:
+        x: An input tensor, \((N, 1, H, W)\).
+        y: A target tensor, \((N, 1, H, W)\).
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+        weights: The weights \(w_i\) of the scales, \((M,)\).
+        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+
+        For the remaining arguments, refer to [2].
+
+    Returns:
+        The MS-GMSD vector, \((N,)\).
+
+    Example:
+        &gt;&gt;&gt; x = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; y = torch.rand(5, 1, 256, 256)
+        &gt;&gt;&gt; kernel = gradient_kernel(prewitt_kernel())
+        &gt;&gt;&gt; weights = torch.rand(4)
+        &gt;&gt;&gt; l = ms_gmsd(x, y, kernel, weights)
+        &gt;&gt;&gt; l.size()
+        torch.Size([5])
+    &#34;&#34;&#34;
+
+    gmsds = []
+
+    for i in range(weights.numel()):
+        if i &gt; 0:
+            x = F.avg_pool2d(x, kernel_size=2, ceil_mode=True)
+            y = F.avg_pool2d(y, kernel_size=2, ceil_mode=True)
+
+        gmsds.append(gmsd(
+            x, y, kernel,
+            value_range=value_range,
+            c=c, alpha=alpha,
+        ))
+
+    msgmsd = torch.stack(gmsds, dim=-1) ** 2
+    msgmsd = torch.sqrt((msgmsd * weights).sum(dim=-1))
+
+    return msgmsd</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="piqa.gmsd.GMSD"><code class="flex name class">
+<span>class <span class="ident">GMSD</span></span>
+<span>(</span><span>kernel: torch.Tensor = None, reduction: str = 'mean', **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a criterion that measures the GMSD
+between an input and a target.</p>
+<p>Before applying <code><a title="piqa.gmsd.gmsd" href="#piqa.gmsd.gmsd">gmsd()</a></code>, the input and target are converted from
+RBG to Y, the luminance color space, and downsampled by a factor 2.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kernel</code></strong></dt>
+<dd>A gradient kernel, <span><span class="MathJax_Preview">(2, 1, K, K)</span><script type="math/tex">(2, 1, K, K)</script></span>.
+If <code>None</code>, use the Prewitt kernel instead.</dd>
+<dt><strong><code>reduction</code></strong></dt>
+<dd>Specifies the reduction to apply to the output:
+<code>'none'</code> | <code>'mean'</code> | <code>'sum'</code>.</dd>
+</dl>
+<p><code>**kwargs</code> are transmitted to <code><a title="piqa.gmsd.gmsd" href="#piqa.gmsd.gmsd">gmsd()</a></code>.</p>
+<h2 id="shapes">Shapes</h2>
+<ul>
+<li>Input: <span><span class="MathJax_Preview">(N, 3, H, W)</span><script type="math/tex">(N, 3, H, W)</script></span></li>
+<li>Target: <span><span class="MathJax_Preview">(N, 3, H, W)</span><script type="math/tex">(N, 3, H, W)</script></span></li>
+<li>Output: <span><span class="MathJax_Preview">(N,)</span><script type="math/tex">(N,)</script></span> or <span><span class="MathJax_Preview">()</span><script type="math/tex">()</script></span> depending on <code>reduction</code></li>
+</ul>
+<h2 id="example">Example</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; criterion = GMSD().cuda()
+&gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+&gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+&gt;&gt;&gt; l = criterion(x, y)
+&gt;&gt;&gt; l.size()
+torch.Size([])
+&gt;&gt;&gt; l.backward()
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L159-L235" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">class GMSD(nn.Module):
+    r&#34;&#34;&#34;Creates a criterion that measures the GMSD
+    between an input and a target.
+
+    Before applying `gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space, and downsampled by a factor 2.
+
+    Args:
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+            If `None`, use the Prewitt kernel instead.
+        reduction: Specifies the reduction to apply to the output:
+            `&#39;none&#39;` | `&#39;mean&#39;` | `&#39;sum&#39;`.
+
+        `**kwargs` are transmitted to `gmsd`.
+
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
+
+    Example:
+        &gt;&gt;&gt; criterion = GMSD().cuda()
+        &gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        &gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+        &gt;&gt;&gt; l = criterion(x, y)
+        &gt;&gt;&gt; l.size()
+        torch.Size([])
+        &gt;&gt;&gt; l.backward()
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        kernel: torch.Tensor = None,
+        reduction: str = &#39;mean&#39;,
+        **kwargs,
+    ):
+        r&#34;&#34;&#34;&#34;&#34;&#34;
+        super().__init__()
+
+        if kernel is None:
+            kernel = gradient_kernel(prewitt_kernel())
+
+        self.register_buffer(&#39;kernel&#39;, kernel)
+
+        self.convert = get_conv(&#39;RGB&#39;, &#39;Y&#39;)
+        self.reduction = reduction
+        self.value_range = kwargs.get(&#39;value_range&#39;, 1.)
+        self.kwargs = kwargs
+
+    def forward(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+    ) -&gt; torch.Tensor:
+        r&#34;&#34;&#34;Defines the computation performed at every call.
+        &#34;&#34;&#34;
+
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
+        # Downsample
+        input = F.avg_pool2d(input, 2, ceil_mode=True)
+        target = F.avg_pool2d(target, 2, ceil_mode=True)
+
+        # RGB to Y
+        input = self.convert(input)
+        target = self.convert(target)
+
+        # GMSD
+        l = gmsd(input, target, kernel=self.kernel, **self.kwargs)
+
+        return _reduce(l, self.reduction)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>torch.nn.modules.module.Module</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="piqa.gmsd.GMSD.dump_patches"><code class="name">var <span class="ident">dump_patches</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="piqa.gmsd.GMSD.training"><code class="name">var <span class="ident">training</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="piqa.gmsd.GMSD.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, input: torch.Tensor, target: torch.Tensor) ‑> torch.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Defines the computation performed at every call.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L208-L235" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">def forward(
+    self,
+    input: torch.Tensor,
+    target: torch.Tensor,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Defines the computation performed at every call.
+    &#34;&#34;&#34;
+
+    _assert_type(
+        [input, target],
+        device=self.kernel.device,
+        dim_range=(4, 4),
+        n_channels=3,
+        value_range=(0., self.value_range),
+    )
+
+    # Downsample
+    input = F.avg_pool2d(input, 2, ceil_mode=True)
+    target = F.avg_pool2d(target, 2, ceil_mode=True)
+
+    # RGB to Y
+    input = self.convert(input)
+    target = self.convert(target)
+
+    # GMSD
+    l = gmsd(input, target, kernel=self.kernel, **self.kwargs)
+
+    return _reduce(l, self.reduction)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="piqa.gmsd.MS_GMSD"><code class="flex name class">
+<span>class <span class="ident">MS_GMSD</span></span>
+<span>(</span><span>kernel: torch.Tensor = None, weights: torch.Tensor = None, reduction: str = 'mean', **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a criterion that measures the MS-GMSD
+between an input and a target.</p>
+<p>Before applying <code><a title="piqa.gmsd.ms_gmsd" href="#piqa.gmsd.ms_gmsd">ms_gmsd()</a></code>, the input and target are converted from
+RBG to Y, the luminance color space.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kernel</code></strong></dt>
+<dd>A gradient kernel, <span><span class="MathJax_Preview">(2, 1, K, K)</span><script type="math/tex">(2, 1, K, K)</script></span>.
+If <code>None</code>, use the Prewitt kernel instead.</dd>
+<dt><strong><code>weights</code></strong></dt>
+<dd>The weights of the scales, <span><span class="MathJax_Preview">(M,)</span><script type="math/tex">(M,)</script></span>.
+If <code>None</code>, use the <code><a title="piqa.gmsd.MS_GMSD.OFFICIAL_WEIGHTS" href="#piqa.gmsd.MS_GMSD.OFFICIAL_WEIGHTS">MS_GMSD.OFFICIAL_WEIGHTS</a></code> instead.</dd>
+<dt><strong><code>reduction</code></strong></dt>
+<dd>Specifies the reduction to apply to the output:
+<code>'none'</code> | <code>'mean'</code> | <code>'sum'</code>.</dd>
+</dl>
+<p><code>**kwargs</code> are transmitted to <code><a title="piqa.gmsd.ms_gmsd" href="#piqa.gmsd.ms_gmsd">ms_gmsd()</a></code>.</p>
+<h2 id="shapes">Shapes</h2>
+<ul>
+<li>Input: <span><span class="MathJax_Preview">(N, 3, H, W)</span><script type="math/tex">(N, 3, H, W)</script></span></li>
+<li>Target: <span><span class="MathJax_Preview">(N, 3, H, W)</span><script type="math/tex">(N, 3, H, W)</script></span></li>
+<li>Output: <span><span class="MathJax_Preview">(N,)</span><script type="math/tex">(N,)</script></span> or <span><span class="MathJax_Preview">()</span><script type="math/tex">()</script></span> depending on <code>reduction</code></li>
+</ul>
+<h2 id="example">Example</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; criterion = MS_GMSD().cuda()
+&gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+&gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+&gt;&gt;&gt; l = criterion(x, y)
+&gt;&gt;&gt; l.size()
+torch.Size([])
+&gt;&gt;&gt; l.backward()
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L238-L327" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">class MS_GMSD(nn.Module):
+    r&#34;&#34;&#34;Creates a criterion that measures the MS-GMSD
+    between an input and a target.
+
+    Before applying `ms_gmsd`, the input and target are converted from
+    RBG to Y, the luminance color space.
+
+    Args:
+        kernel: A gradient kernel, \((2, 1, K, K)\).
+            If `None`, use the Prewitt kernel instead.
+        weights: The weights of the scales, \((M,)\).
+            If `None`, use the `MS_GMSD.OFFICIAL_WEIGHTS` instead.
+        reduction: Specifies the reduction to apply to the output:
+            `&#39;none&#39;` | `&#39;mean&#39;` | `&#39;sum&#39;`.
+
+        `**kwargs` are transmitted to `ms_gmsd`.
+
+    Shapes:
+        * Input: \((N, 3, H, W)\)
+        * Target: \((N, 3, H, W)\)
+        * Output: \((N,)\) or \(()\) depending on `reduction`
+
+    Example:
+        &gt;&gt;&gt; criterion = MS_GMSD().cuda()
+        &gt;&gt;&gt; x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        &gt;&gt;&gt; y = torch.rand(5, 3, 256, 256).cuda()
+        &gt;&gt;&gt; l = criterion(x, y)
+        &gt;&gt;&gt; l.size()
+        torch.Size([])
+        &gt;&gt;&gt; l.backward()
+    &#34;&#34;&#34;
+
+    OFFICIAL_WEIGHTS: torch.Tensor = torch.tensor(
+        [0.096, 0.596, 0.289, 0.019]
+    )
+
+    def __init__(
+        self,
+        kernel: torch.Tensor = None,
+        weights: torch.Tensor = None,
+        reduction: str = &#39;mean&#39;,
+        **kwargs,
+    ):
+        r&#34;&#34;&#34;&#34;&#34;&#34;
+        super().__init__()
+
+        if kernel is None:
+            kernel = gradient_kernel(prewitt_kernel())
+
+        if weights is None:
+            weights = self.OFFICIAL_WEIGHTS
+
+        self.register_buffer(&#39;kernel&#39;, kernel)
+        self.register_buffer(&#39;weights&#39;, weights)
+
+        self.convert = get_conv(&#39;RGB&#39;, &#39;Y&#39;)
+        self.reduction = reduction
+        self.value_range = kwargs.get(&#39;value_range&#39;, 1.)
+        self.kwargs = kwargs
+
+    def forward(
+        self,
+        input: torch.Tensor,
+        target: torch.Tensor,
+    ) -&gt; torch.Tensor:
+        r&#34;&#34;&#34;Defines the computation performed at every call.
+        &#34;&#34;&#34;
+
+        _assert_type(
+            [input, target],
+            device=self.kernel.device,
+            dim_range=(4, 4),
+            n_channels=3,
+            value_range=(0., self.value_range),
+        )
+
+        # RGB to Y
+        input = self.convert(input)
+        target = self.convert(target)
+
+        # MS-GMSD
+        l = ms_gmsd(
+            input,
+            target,
+            kernel=self.kernel,
+            weights=self.weights,
+            **self.kwargs,
+        )
+
+        return _reduce(l, self.reduction)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>torch.nn.modules.module.Module</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="piqa.gmsd.MS_GMSD.OFFICIAL_WEIGHTS"><code class="name">var <span class="ident">OFFICIAL_WEIGHTS</span> : torch.Tensor</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="piqa.gmsd.MS_GMSD.forward"><code class="name flex">
+<span>def <span class="ident">forward</span></span>(<span>self, input: torch.Tensor, target: torch.Tensor) ‑> torch.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Defines the computation performed at every call.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+<a href="https://github.com/francois-rozet/piqa/blob/43f6d66a676b1b8187c4222bd5c19a85275a4af2/piqa/gmsd.py#L298-L327" class="git-link">Browse git</a>
+</summary>
+<pre><code class="python">def forward(
+    self,
+    input: torch.Tensor,
+    target: torch.Tensor,
+) -&gt; torch.Tensor:
+    r&#34;&#34;&#34;Defines the computation performed at every call.
+    &#34;&#34;&#34;
+
+    _assert_type(
+        [input, target],
+        device=self.kernel.device,
+        dim_range=(4, 4),
+        n_channels=3,
+        value_range=(0., self.value_range),
+    )
+
+    # RGB to Y
+    input = self.convert(input)
+    target = self.convert(target)
+
+    # MS-GMSD
+    l = ms_gmsd(
+        input,
+        target,
+        kernel=self.kernel,
+        weights=self.weights,
+        **self.kwargs,
+    )
+
+    return _reduce(l, self.reduction)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="piqa" href="index.html">piqa</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="piqa.gmsd.gmsd" href="#piqa.gmsd.gmsd">gmsd</a></code></li>
+<li><code><a title="piqa.gmsd.ms_gmsd" href="#piqa.gmsd.ms_gmsd">ms_gmsd</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="piqa.gmsd.GMSD" href="#piqa.gmsd.GMSD">GMSD</a></code></h4>
+<ul class="">
+<li><code><a title="piqa.gmsd.GMSD.dump_patches" href="#piqa.gmsd.GMSD.dump_patches">dump_patches</a></code></li>
+<li><code><a title="piqa.gmsd.GMSD.forward" href="#piqa.gmsd.GMSD.forward">forward</a></code></li>
+<li><code><a title="piqa.gmsd.GMSD.training" href="#piqa.gmsd.GMSD.training">training</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="piqa.gmsd.MS_GMSD" href="#piqa.gmsd.MS_GMSD">MS_GMSD</a></code></h4>
+<ul class="">
+<li><code><a title="piqa.gmsd.MS_GMSD.OFFICIAL_WEIGHTS" href="#piqa.gmsd.MS_GMSD.OFFICIAL_WEIGHTS">OFFICIAL_WEIGHTS</a></code></li>
+<li><code><a title="piqa.gmsd.MS_GMSD.forward" href="#piqa.gmsd.MS_GMSD.forward">forward</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>
