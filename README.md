@@ -60,7 +60,7 @@ x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
 y = torch.rand(5, 3, 256, 256).cuda()
 
 ssim = SSIM().cuda()
-l = ssim(x, y)
+l = 1 - ssim(x, y)
 l.backward()
 ```
 
@@ -82,17 +82,17 @@ l = ssim(x, y, kernel=kernel, channel_avg=False)
 
 ### Metrics
 
-| Acronym | Class     | Year | Metric                                                                                               |
-|:-------:|:---------:|:----:|------------------------------------------------------------------------------------------------------|
-| TV      | `TV`      | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
-| PSNR    | `PSNR`    | /    | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
-| SSIM    | `SSIM`    | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
-| MS-SSIM | `MS_SSIM` | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
-| LPIPS   | `LPIPS`   | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
-| GMSD    | `GMSD`    | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
-| MS-GMSD | `MS_GMSD` | 2017 | [Multi-Scale Gradient Magnitude Similarity Deviation](https://ieeexplore.ieee.org/document/7952357) |
-| MDSI    | `MDSI`    | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
-| HaarPSI | `HaarPSI` | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
+| Acronym | Class     | Range    | Objective | Year | Metric                                                                                               |
+|:-------:|:---------:|:--------:|:---------:|:----:|------------------------------------------------------------------------------------------------------|
+| TV      | `TV`      | `[0, ∞]` | /         | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
+| PSNR    | `PSNR`    | `[0, ∞]` | max       | /    | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
+| SSIM    | `SSIM`    | `[0, 1]` | max       | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
+| MS-SSIM | `MS_SSIM` | `[0, 1]` | max       | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
+| LPIPS   | `LPIPS`   | `[0, ∞]` | min       | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
+| GMSD    | `GMSD`    | `[0, ∞]` | min       | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
+| MS-GMSD | `MS_GMSD` | `[0, ∞]` | min       | 2017 | [Multi-Scale Gradient Magnitude Similarity Deviation](https://ieeexplore.ieee.org/document/7952357)  |
+| MDSI    | `MDSI`    | `[0, ∞]` | min       | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
+| HaarPSI | `HaarPSI` | `[0, 1]` | max       | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
 
 ### JIT
 
