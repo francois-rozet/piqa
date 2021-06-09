@@ -17,6 +17,8 @@ from piqa import (
     mdsi,
     gmsd,
     haarpsi,
+    vsi,
+    fsim,
 )
 
 
@@ -34,6 +36,8 @@ if __name__ == '__main__':
         mdsi,
         gmsd,
         haarpsi,
+        vsi,
+        fsim,
     ]
 
     for m in modules:

@@ -2,6 +2,7 @@ r"""General purpose tensor functionals
 """
 
 import torch
+import torch.fft as fft
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -266,3 +267,71 @@ def gradient_kernel(kernel: torch.Tensor) -> torch.Tensor:
     """
 
     return torch.stack([kernel, kernel.t()]).unsqueeze(1)
+
+
+def filter_grid(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    r"""Returns the (quadrant-shifted) frequency grid for \(x\).
+
+    Args:
+        x: An input tensor, \((*, H, W)\).
+
+    Returns:
+        The radius and phase tensors, both \((H, W)\).
+
+    Example:
+        >>> x = torch.rand(5, 5)
+        >>> r, phi = filter_grid(x)
+        >>> r
+        tensor([[0.0000, 0.2500, 0.5000, 0.5000, 0.2500],
+                [0.2500, 0.3536, 0.5590, 0.5590, 0.3536],
+                [0.5000, 0.5590, 0.7071, 0.7071, 0.5590],
+                [0.5000, 0.5590, 0.7071, 0.7071, 0.5590],
+                [0.2500, 0.3536, 0.5590, 0.5590, 0.3536]])
+        >>> phi
+        tensor([[-0.0000, -1.5708, -1.5708,  1.5708,  1.5708],
+                [-0.0000, -0.7854, -1.1071,  1.1071,  0.7854],
+                [-0.0000, -0.4636, -0.7854,  0.7854,  0.4636],
+                [-3.1416, -2.6779, -2.3562,  2.3562,  2.6779],
+                [-3.1416, -2.3562, -2.0344,  2.0344,  2.3562]])
+    """
+
+    u, v = [
+        (torch.arange(n).to(x) - n // 2) / (n - n % 2)
+        for n in x.shape[-2:]
+    ]
+    u, v = fft.ifftshift(u[:, None]), fft.ifftshift(v[None, :])
+
+    r = (u ** 2 + v ** 2).sqrt()
+    phi = torch.atan2(-v, u)
+
+    return r, phi
+
+
+def log_gabor(f: torch.Tensor, f_0: float, sigma_f: float) -> torch.Tensor:
+    r"""Returns the log-Gabor filter of \(f\).
+
+    $$ G(f) = \exp \left( - \frac{\log(f / f_0)^2}{2 \sigma_f^2} \right) $$
+
+    Args:
+        f: A frequency tensor, \((*,)\).
+        f_0: The center frequency \(f_0\).
+        sigma_f: The bandwidth (log-)deviation \(\sigma_f\).
+
+    Returns:
+        The filter tensor, \((*,)\).
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Log_Gabor_filter
+
+    Example:
+        >>> x = torch.rand(5, 5)
+        >>> r, phi = filter_grid(x)
+        >>> log_gabor(r, 1., 1.)
+        tensor([[0.0000, 0.3825, 0.7864, 0.7864, 0.3825],
+                [0.3825, 0.5825, 0.8444, 0.8444, 0.5825],
+                [0.7864, 0.8444, 0.9417, 0.9417, 0.8444],
+                [0.7864, 0.8444, 0.9417, 0.9417, 0.8444],
+                [0.3825, 0.5825, 0.8444, 0.8444, 0.5825]])
+    """
+
+    return torch.exp(- (f / f_0).log() ** 2 / (2 * sigma_f ** 2))

@@ -2,6 +2,9 @@ r"""Mean Deviation Similarity Index (MDSI)
 
 This module implements the MDSI in PyTorch.
 
+Credits:
+    Inspired by the [official implementation](https://www.mathworks.com/matlabcentral/fileexchange/59809-mdsi-ref-dist-combmethod)
+
 References:
     [1] Mean Deviation Similarity Index:
     Efficient and Reliable Full-Reference Image Quality Evaluator
@@ -14,7 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from piqa.utils import _jit, _assert_type, _reduce
-from piqa.utils.color import get_conv
+from piqa.utils.color import ColorConv
 from piqa.utils.functional import (
     prewitt_kernel,
     gradient_kernel,
@@ -159,7 +162,7 @@ class MDSI(nn.Module):
 
         self.register_buffer('kernel', kernel)
 
-        self.convert = get_conv('RGB', 'LHM')
+        self.convert = ColorConv('RGB', 'LHM')
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs

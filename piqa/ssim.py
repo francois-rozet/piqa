@@ -11,11 +11,11 @@ Credits:
 References:
     [1] Image quality assessment: From error visibility to structural similarity
     (Wang et al., 2004)
-    https://ieeexplore.ieee.org/abstract/document/1284395/
+    https://ieeexplore.ieee.org/document/1284395/
 
     [2] Multiscale structural similarity for image quality assessment
     (Wang et al., 2004)
-    https://ieeexplore.ieee.org/abstract/document/1292216/
+    https://ieeexplore.ieee.org/document/1292216/
 """
 
 import torch

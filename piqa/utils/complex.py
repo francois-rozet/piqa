@@ -28,6 +28,42 @@ def complex(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
     return torch.stack([real, imag], dim=-1)
 
 
+def real(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the real part of \(x\).
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The real tensor, \((*,)\).
+
+    Example:
+        >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
+        >>> real(x)
+        tensor([2.0000, 0.7071])
+    """
+
+    return x[..., 0]
+
+
+def imag(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the imaginary part of \(x\).
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The imaginary tensor, \((*,)\).
+
+    Example:
+        >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
+        >>> imag(x)
+        tensor([0.0000, 0.7071])
+    """
+
+    return x[..., 1]
+
+
 def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
     r"""Returns a complex tensor with its modulus equal to \(r\)
     and its phase equal to \(\phi\).
@@ -123,6 +159,28 @@ def prod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     y_r, y_i = y[..., 0], y[..., 1]
 
     return complex(x_r * y_r - x_i * y_i, x_i * y_r + x_r * y_i)
+
+
+def dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    r"""Returns the element-wise dot-product of \(x\) and \(y\).
+
+    $$ x \odot y = \Re(x) \Re(y) + \Im(x) \Im(y) $$
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+        y: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The dot-product tensor, \((*,)\).
+
+    Example:
+        >>> x = torch.tensor([[2.,  0.], [0.7071,  0.7071]])
+        >>> y = torch.tensor([[2., -0.], [0.7071, -0.7071]])
+        >>> dot(x, y)
+        tensor([4., 0.])
+    """
+
+    return (x * y).sum(dim=-1)
 
 
 def pow(x: torch.Tensor, exponent: float) -> torch.Tensor:

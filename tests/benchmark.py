@@ -39,7 +39,6 @@ METRICS = {
     'TV': (1, {
         'kornia.tv': kornia.total_variation,
         'piq.tv': lambda x: piq.total_variation(x, norm_type='l1'),
-        'piq.TV': piq.TVLoss(norm_type='l1'),
         'piqa.TV': piqa.TV(),
     }),
     'PSNR': (2, {
@@ -55,48 +54,49 @@ METRICS = {
             multichannel=True,
             gaussian_weights=True,
         ),
-        'piq.ssim': piq.ssim,
+        'piq.ssim': lambda x, y: piq.ssim(x, y, downsample=False),
         'kornia.SSIM-halfloss': kornia.SSIM(
             window_size=11,
             reduction='mean',
         ),
-        'piq.SSIM-loss': piq.SSIMLoss(),
         'IQA.SSIM-loss': IQA.SSIM(),
         'vainf.SSIM': vainf.SSIM(data_range=1.),
         'piqa.SSIM': piqa.SSIM(),
     }),
     'MS-SSIM': (2, {
         'piq.ms_ssim': piq.multi_scale_ssim,
-        'piq.MS_SSIM-loss': piq.MultiScaleSSIMLoss(),
         'IQA.MS_SSIM-loss': IQA.MS_SSIM(),
         'vainf.MS_SSIM': vainf.MS_SSIM(data_range=1.),
         'piqa.MS_SSIM': piqa.MS_SSIM(),
     }),
     'LPIPS': (2, {
-        'piq.LPIPS': piq.LPIPS(),
-        # 'IQA.LPIPS': IQA.LPIPSvgg(),
+        # 'piq.LPIPS': piq.LPIPS(),
+        'IQA.LPIPS': IQA.LPIPSvgg(),
         'piqa.LPIPS': piqa.LPIPS(network='vgg')
     }),
     'GMSD': (2, {
         'piq.gmsd': piq.gmsd,
-        'piq.GMSD': piq.GMSDLoss(),
-        # 'IQA.GMSD': IQA.GMSD(),
         'piqa.GMSD': piqa.GMSD(),
     }),
     'MS-GMSD': (2, {
         'piq.ms_gmsd': piq.multi_scale_gmsd,
-        'piq.MS_GMSD': piq.MultiScaleGMSDLoss(),
         'piqa.MS_GMSD': piqa.MS_GMSD(),
     }),
     'MDSI': (2, {
         'piq.mdsi': piq.mdsi,
-        'piq.MDSI-loss': piq.MDSILoss(),
         'piqa.MDSI': piqa.MDSI(),
     }),
     'HaarPSI': (2, {
         'piq.haarpsi': piq.haarpsi,
-        'piq.HaarPSI-loss': piq.HaarPSILoss(),
         'piqa.HaarPSI': piqa.HaarPSI(),
+    }),
+    'VSI': (2, {
+        'piq.vsi': piq.vsi,
+        'piqa.VSI': piqa.VSI(),
+    }),
+    'FSIM': (2, {
+        'piq.fsim': piq.fsim,
+        'piqa.FSIM': piqa.FSIM(),
     }),
 }
 
@@ -159,7 +159,6 @@ def main(
     y = totensor(truth).repeat(batch, 1, 1, 1).to(device)
 
     x.requires_grad_()
-    y.requires_grad_()
 
     # Metrics
     if metrics:
@@ -169,6 +168,8 @@ def main(
         }
     else:
         metrics = {k: v for (k, v) in METRICS.items()}
+
+        del metrics['LPIPS']
 
     # Benchmark
     for name, (nargs, methods) in metrics.items():

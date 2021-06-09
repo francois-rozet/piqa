@@ -3,6 +3,9 @@ and Multi-Scale Gradient Magnitude Similarity Deviation (MS-GMSD)
 
 This module implements the GMSD and MS-GMSD in PyTorch.
 
+Credits:
+    Inspired by the [official implementation](https://www4.comp.polyu.edu.hk/~cslzhang/IQA/GMSD/GMSD.htm)
+
 References:
     [1] Gradient Magnitude Similarity Deviation:
     An Highly Efficient Perceptual Image Quality Index
@@ -20,7 +23,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from piqa.utils import _jit, _assert_type, _reduce
-from piqa.utils.color import get_conv
+from piqa.utils.color import ColorConv
 from piqa.utils.functional import (
     prewitt_kernel,
     gradient_kernel,
@@ -200,7 +203,7 @@ class GMSD(nn.Module):
 
         self.register_buffer('kernel', kernel)
 
-        self.convert = get_conv('RGB', 'Y')
+        self.convert = ColorConv('RGB', 'Y')
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -290,7 +293,7 @@ class MS_GMSD(nn.Module):
         self.register_buffer('kernel', kernel)
         self.register_buffer('weights', weights)
 
-        self.convert = get_conv('RGB', 'Y')
+        self.convert = ColorConv('RGB', 'Y')
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs

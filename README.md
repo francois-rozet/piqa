@@ -87,12 +87,14 @@ l = ssim(x, y, kernel=kernel, channel_avg=False)
 | TV      | `TV`      | `[0, ∞]` | /         | 1937 | [Total Variation](https://en.wikipedia.org/wiki/Total_variation)                                     |
 | PSNR    | `PSNR`    | `[0, ∞]` | max       | /    | [Peak Signal-to-Noise Ratio](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio)               |
 | SSIM    | `SSIM`    | `[0, 1]` | max       | 2004 | [Structural Similarity](https://en.wikipedia.org/wiki/Structural_similarity)                         |
-| MS-SSIM | `MS_SSIM` | `[0, 1]` | max       | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/abstract/document/1292216/)          |
+| MS-SSIM | `MS_SSIM` | `[0, 1]` | max       | 2004 | [Multi-Scale Structural Similarity](https://ieeexplore.ieee.org/document/1292216/)                   |
 | LPIPS   | `LPIPS`   | `[0, ∞]` | min       | 2018 | [Learned Perceptual Image Patch Similarity](https://arxiv.org/abs/1801.03924)                        |
 | GMSD    | `GMSD`    | `[0, ∞]` | min       | 2013 | [Gradient Magnitude Similarity Deviation](https://arxiv.org/abs/1308.3052)                           |
 | MS-GMSD | `MS_GMSD` | `[0, ∞]` | min       | 2017 | [Multi-Scale Gradient Magnitude Similarity Deviation](https://ieeexplore.ieee.org/document/7952357)  |
 | MDSI    | `MDSI`    | `[0, ∞]` | min       | 2016 | [Mean Deviation Similarity Index](https://arxiv.org/abs/1608.07433)                                  |
 | HaarPSI | `HaarPSI` | `[0, 1]` | max       | 2018 | [Haar Perceptual Similarity Index](https://arxiv.org/abs/1607.06140)                                 |
+| VSI     | `VSI`     | `[0, 1]` | max       | 2014 | [Visual Saliency-based Index](https://ieeexplore.ieee.org/document/6873260)                          |
+| FSIM    | `FSIM`    | `[0, 1]` | max       | 2011 | [Feature Similarity](https://ieeexplore.ieee.org/document/5705575)                                   |
 
 ### JIT
 

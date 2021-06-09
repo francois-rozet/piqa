@@ -20,7 +20,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from piqa.utils import _jit, _assert_type, _reduce
-from piqa.utils.color import get_conv
+from piqa.utils.color import ColorConv
 from piqa.utils.functional import (
     haar_kernel,
     gradient_kernel,
@@ -155,7 +155,7 @@ class HaarPSI(nn.Module):
         r""""""
         super().__init__()
 
-        self.convert = get_conv('RGB', 'YIQ' if chromatic else 'Y')
+        self.convert = ColorConv('RGB', 'YIQ' if chromatic else 'Y')
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
