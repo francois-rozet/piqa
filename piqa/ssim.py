@@ -38,6 +38,7 @@ def ssim(
     y: torch.Tensor,
     kernel: torch.Tensor,
     channel_avg: bool = True,
+    padding: bool = False,
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
@@ -69,6 +70,8 @@ def ssim(
         kernel: A smoothing kernel, \((C, 1, K)\).
             E.g. `piqa.utils.functional.gaussian_kernel`.
         channel_avg: Whether to average over the channels or not.
+        padding: Whether to pad with \(\frac{K}{2}\) zeros the spatial
+            dimensions or not.
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [1].
@@ -91,18 +94,23 @@ def ssim(
 
     window = kernel_views(kernel, x.dim() - 2)
 
+    if padding:
+        pad = kernel.size(-1) // 2
+    else:
+        pad = 0
+
     # Mean (mu)
-    mu_x = channel_convs(x, window)
-    mu_y = channel_convs(y, window)
+    mu_x = channel_convs(x, window, pad)
+    mu_y = channel_convs(y, window, pad)
 
     mu_xx = mu_x ** 2
     mu_yy = mu_y ** 2
     mu_xy = mu_x * mu_y
 
     # Variance (sigma)
-    sigma_xx = channel_convs(x ** 2, window) - mu_xx
-    sigma_yy = channel_convs(y ** 2, window) - mu_yy
-    sigma_xy = channel_convs(x * y, window) - mu_xy
+    sigma_xx = channel_convs(x ** 2, window, pad) - mu_xx
+    sigma_yy = channel_convs(y ** 2, window, pad) - mu_yy
+    sigma_xy = channel_convs(x * y, window, pad) - mu_xy
 
     # Contrast sensitivity (CS)
     cs = (2. * sigma_xy + c2) / (sigma_xx + sigma_yy + c2)
@@ -125,6 +133,7 @@ def ms_ssim(
     y: torch.Tensor,
     kernel: torch.Tensor,
     weights: torch.Tensor,
+    padding: bool = False,
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
@@ -144,6 +153,8 @@ def ms_ssim(
         kernel: A smoothing kernel, \((C, 1, K)\).
             E.g. `piqa.utils.functional.gaussian_kernel`.
         weights: The weights \(\gamma_i\) of the scales, \((M,)\).
+        padding: Whether to pad with \(\frac{K}{2}\) zeros the spatial
+            dimensions or not.
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
         For the remaining arguments, refer to [2].
@@ -172,6 +183,7 @@ def ms_ssim(
         ss, cs = ssim(
             x, y, kernel,
             channel_avg=False,
+            padding=padding,
             value_range=value_range,
             k1=k1, k2=k2,
         )
