@@ -64,6 +64,48 @@ def imag(x: torch.Tensor) -> torch.Tensor:
     return x[..., 1]
 
 
+def conj(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the element-wise conjugate of \(x\).
+
+    $$ \bar{x} = \Re(x) - i \Im(x) $$
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The conjugate tensor, \((*, 2)\).
+
+    Example:
+        >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
+        >>> conj(x)
+        tensor([[ 2.0000, -0.0000],
+                [ 0.7071, -0.7071]])
+    """
+
+    return x * torch.tensor([1., -1.]).to(x)
+
+
+def turn(x: torch.Tensor) -> torch.Tensor:
+    r"""Returns the element-wise product of \(x\) with \(i\).
+
+    $$ i x = -\Im(x) + i \Re(x) $$
+
+    Args:
+        x: A complex tensor, \((*, 2)\).
+
+    Returns:
+        The turned tensor, \((*, 2)\).
+
+    Example:
+        >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
+        >>> turn(x)
+        tensor([[-0.0000,  2.0000],
+                [-0.7071,  0.7071]])
+    """
+
+    return complex(-imag(x), real(x))
+
+
 def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
     r"""Returns a complex tensor with its modulus equal to \(r\)
     and its phase equal to \(\phi\).

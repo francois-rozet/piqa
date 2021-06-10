@@ -35,121 +35,11 @@ import piqa.utils.complex as cx
 
 
 @_jit
-def phase_congruency(
-    x: torch.Tensor,
-    value_range: float = 1.,
-    scales: int = 4,
-    orientations: int = 4,
-    wavelength: float = 6.,
-    factor: float = 2.,
-    sigma_f: float = 0.5978,  # -log(0.55)
-    sigma_theta: float = 0.6545,  # pi / (4 * 1.2)
-    k: float = 2.,
-    rescale: float = 1.7,
-    eps: float = 1e-8,
-) -> torch.Tensor:
-    r"""Returns the phase congruency of \(x\).
-
-    Args:
-        x: An input tensor, \((N, 1, H, W)\).
-
-        For the remaining arguments, refer to [2].
-
-    Returns:
-        The PC tensor, \((N, H, W)\).
-
-    Example:
-        >>> x = torch.rand(5, 1, 256, 256)
-        >>> l = phase_congruency(x)
-        >>> l.size()
-        torch.Size([5, 256, 256])
-    """
-
-    x = x * (255. / value_range)
-
-    # log-Gabor filters
-    r, theta = filter_grid(x)  # (H, W)
-
-    ## Radial
-    lowpass = 1 / (1 + (r / 0.45) ** (2 * 15))
-
-    a = torch.stack([
-        log_gabor(r, 1 / (wavelength * factor ** i), sigma_f) * lowpass
-        for i in range(scales)
-    ])
-
-    ## Angular
-    cos_theta = torch.cos(theta)
-    sin_theta = torch.sin(theta)
-
-    theta_j = math.pi * torch.arange(orientations).to(x) / orientations
-    theta_j = theta_j.view(orientations, 1, 1)
-
-    # Measure (theta - theta_j) in the sine/cosine domains
-    # to prevent wrap-around errors
-    delta_sin = sin_theta * theta_j.cos() - cos_theta * theta_j.sin()
-    delta_cos = cos_theta * theta_j.cos() + sin_theta * theta_j.sin()
-    delta_theta = torch.atan2(delta_sin, delta_cos)
-
-    b = torch.exp(-delta_theta ** 2 / (2 * sigma_theta ** 2))
-
-    ## Combine
-    filters = a[:, None] * b[None, :]
-
-    # Even & odd (real and imaginary) filter responses
-    eo = fft.ifft2(fft.fft2(x[:, None]) * filters)
-    eo = torch.view_as_real(eo)  # (N, scales, orientations, H, W, 2)
-
-    ## Amplitude
-    a = cx.mod(eo)
-
-    ## Energy
-    sum_eo = eo.sum(dim=1, keepdim=True)
-    mean_eo = sum_eo / (cx.mod(sum_eo)[..., None] + eps)
-
-    rot90_eo = cx.complex(-cx.imag(eo), cx.real(eo))
-
-    energy = cx.dot(eo, mean_eo) - cx.dot(rot90_eo, mean_eo).abs()
-    energy = energy.sum(dim=1, keepdim=True)
-    energy = energy.squeeze(1)  # (N, orientations, H, W)
-
-    # Noise
-    e2 = a[:, 0] ** 2
-    median_e2, _ = torch.median(e2.flatten(-2), dim=-1)
-    mean_e2 = -median_e2 / math.log(0.5)
-
-    em = (filters[0] ** 2).sum(dim=(-1, -2))
-    noise_power = mean_e2 / em
-
-    ## Total energy^2 due to noise
-    ifft_filters = fft.ifft2(filters)
-    ifft_filters = cx.real(torch.view_as_real(ifft_filters))
-
-    sum_aiaj = (ifft_filters[None, :] * ifft_filters[:, None]).sum(dim=(0, 1, 3, 4))
-    sum_aiaj = sum_aiaj * r.numel()
-
-    noise_energy2 = noise_power * sum_aiaj  # (N, orientations)
-    noise_energy2 = noise_energy2[..., None, None]
-
-    ## Noise threshold
-    tau = noise_energy2.sqrt()  # Rayleigh parameter
-
-    c, d = (math.pi / 2) ** 0.5, (2 - math.pi / 2) ** 0.5
-    noise_threshold = tau * (c + k * d)
-    noise_threshold = noise_threshold / rescale  # emprirical rescaling
-
-    energy = (energy - noise_threshold).relu()
-
-    # Phase congruency
-    pc = energy.sum(dim=1) / (a.sum(dim=(1, 2)) + eps)  # (N, H, W)
-
-    return pc
-
-
-@_jit
 def fsim(
     x: torch.Tensor,
     y: torch.Tensor,
+    pc_x: torch.Tensor,
+    pc_y: torch.Tensor,
     kernel: torch.Tensor,
     value_range: float = 1.,
     t1: float = 0.85,
@@ -164,6 +54,8 @@ def fsim(
     Args:
         x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
         y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
+        pc_x: The input phase congruency, \((N, H, W)\).
+        pc_y: The target phase congruency, \((N, H, W)\).
         kernel: A gradient kernel, \((2, 1, K, K)\).
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
@@ -175,8 +67,11 @@ def fsim(
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
+        >>> filters = pc_filters(x)
+        >>> pc_x = phase_congruency(x[:, :1], filters)
+        >>> pc_y = phase_congruency(y[:, :1], filters)
         >>> kernel = gradient_kernel(scharr_kernel())
-        >>> l = fsim(x, y, kernel)
+        >>> l = fsim(x, y, pc_x, pc_y, kernel)
         >>> l.size()
         torch.Size([5])
     """
@@ -188,10 +83,7 @@ def fsim(
     y_x, y_y = x[:, :1], y[:, :1]
 
     # Phase congruency similarity
-    pc_x = phase_congruency(y_x, value_range)
-    pc_y = phase_congruency(y_y, value_range)
     pc_m = torch.max(pc_x, pc_y)
-
     s_pc = (2 * pc_x * pc_y + t1) / (pc_x ** 2 + pc_y ** 2 + t1)
 
     # Gradient magnitude similarity
@@ -222,6 +114,140 @@ def fsim(
     fs = (s_l * pc_m).sum(dim=(-1, -2)) / pc_m.sum(dim=(-1, -2))
 
     return fs
+
+
+@_jit
+def pc_filters(
+    x: torch.Tensor,
+    scales: int = 4,
+    orientations: int = 4,
+    wavelength: float = 6.,
+    factor: float = 2.,
+    sigma_f: float = 0.5978,  # -log(0.55)
+    sigma_theta: float = 0.6545,  # pi / (4 * 1.2)
+) -> torch.Tensor:
+    r"""Returns the log-Gabor filters for `phase_congruency`.
+
+    Args:
+        x: An input tensor, \((*, H, W)\).
+        scales: The number of scales, \(S_1\).
+        orientations: The number of orientations, \(S_2\).
+
+        For the remaining arguments, refer to [2].
+
+    Returns:
+        The filters tensor, \((S_1, S_2, H, W)\).
+    """
+
+    r, theta = filter_grid(x)
+
+    # Low-pass filter
+    lowpass = 1 / (1 + (r / 0.45) ** (2 * 15))
+
+    # Radial
+    radial = []
+
+    for i in range(scales):
+        f_0 = 1 / (wavelength * factor ** i)
+        lg = log_gabor(r, f_0, sigma_f)
+        radial.append(lg)
+
+    radial = torch.stack(radial)
+
+    # Angular
+    cos_theta = torch.cos(theta)
+    sin_theta = torch.sin(theta)
+
+    theta_j = math.pi * torch.arange(orientations).to(x) / orientations
+    theta_j = theta_j.view(orientations, 1, 1)
+
+    ## Measure (theta - theta_j) in the sine/cosine domains
+    ## to prevent wrap-around errors
+    delta_sin = sin_theta * theta_j.cos() - cos_theta * theta_j.sin()
+    delta_cos = cos_theta * theta_j.cos() + sin_theta * theta_j.sin()
+    delta_theta = torch.atan2(delta_sin, delta_cos)
+
+    angular = torch.exp(-delta_theta ** 2 / (2 * sigma_theta ** 2))
+
+    # Combination
+    filters = lowpass * radial[:, None] * angular[None, :]
+
+    return filters
+
+
+@_jit
+def phase_congruency(
+    x: torch.Tensor,
+    filters: torch.Tensor,
+    value_range: float = 1.,
+    k: float = 2.,
+    rescale: float = 1.7,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    r"""Returns the Phase Congruency (PC) of \(x\).
+
+    Args:
+        x: An input tensor, \((N, 1, H, W)\).
+        filters: The frequency domain filters, \((S_1, S_2, H, W)\).
+        value_range: The value range \(L\) of the input (usually 1. or 255).
+
+        For the remaining arguments, refer to [2].
+
+    Returns:
+        The PC tensor, \((N, H, W)\).
+
+    Example:
+        >>> x = torch.rand(5, 1, 256, 256)
+        >>> filters = pc_filters(x)
+        >>> pc = phase_congruency(x, filters)
+        >>> pc.size()
+        torch.Size([5, 256, 256])
+    """
+
+    x = x * (255. / value_range)
+
+    # Filters
+    M_hat = filters
+    M = fft.ifft2(M_hat)
+    M = cx.real(torch.view_as_real(M))
+
+    # Even & odd (real and imaginary) responses
+    eo = fft.ifft2(fft.fft2(x[:, None]) * M_hat)
+    eo = torch.view_as_real(eo)
+
+    # Amplitude
+    A = cx.mod(eo)
+
+    # Expected E^2
+    A2 = A[:, 0] ** 2
+    median_A2, _ = A2.flatten(-2).median(dim=-1)
+    expect_A2 = median_A2 / math.log(2)
+
+    expect_M2_hat = (M_hat[0] ** 2).mean(dim=(-1, -2))
+    expect_MiMj = (M[:, None] * M[None, :]).sum(dim=(0, 1, 3, 4))
+
+    expect_E2 = expect_A2 * expect_MiMj / expect_M2_hat
+
+    # Threshold
+    sigma_G = expect_E2.sqrt()
+    mu_R = sigma_G * (math.pi / 2) ** 0.5
+    sigma_R = sigma_G * (2 - math.pi / 2) ** 0.5
+
+    T = mu_R + k * sigma_R
+    T = T / rescale  # emprirical rescaling
+    T = T[..., None, None]
+
+    # Phase deviation
+    FH = eo.sum(dim=1, keepdim=True)
+    phi_eo = FH / (cx.mod(FH)[..., None] + eps)
+
+    E = cx.dot(eo, phi_eo) - cx.dot(eo, cx.turn(phi_eo)).abs()
+    E = E.sum(dim=1)
+
+    # Phase congruency
+    pc = (E - T).relu().sum(dim=1) / (A.sum(dim=(1, 2)) + eps)
+
+    return pc
 
 
 class FSIM(nn.Module):
@@ -264,6 +290,7 @@ class FSIM(nn.Module):
             kernel = gradient_kernel(scharr_kernel())
 
         self.register_buffer('kernel', kernel)
+        self.register_buffer('filters', torch.zeros((0, 0, 0, 0)))
 
         self.convert = ColorConv('RGB', 'YIQ' if chromatic else 'Y')
         self.reduction = reduction
@@ -298,7 +325,14 @@ class FSIM(nn.Module):
         input = self.convert(input)
         target = self.convert(target)
 
+        # Phase congruency
+        if self.filters.shape[-2:] != (h, w):
+            self.filters = pc_filters(input)
+
+        pc_input = phase_congruency(input[:, :1], self.filters, self.value_range)
+        pc_target = phase_congruency(target[:, :1], self.filters, self.value_range)
+
         # FSIM
-        l = fsim(input, target, kernel=self.kernel, **self.kwargs)
+        l = fsim(input, target, pc_input, pc_target, kernel=self.kernel, **self.kwargs)
 
         return _reduce(l, self.reduction)

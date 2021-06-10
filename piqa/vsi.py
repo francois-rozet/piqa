@@ -56,8 +56,8 @@ def vsi(
     Args:
         x: An input tensor, \((N, 3, H, W)\).
         y: A target tensor, \((N, 3, H, W)\).
-        vs_x: The input visual salience, \((N, H, W)\).
-        vs_y: The target visual salience, \((N, H, W)\).
+        vs_x: The input visual saliency, \((N, H, W)\).
+        vs_y: The target visual saliency, \((N, H, W)\).
         kernel: A gradient kernel, \((2, 1, K, K)\).
         value_range: The value range \(L\) of the inputs (usually 1. or 255).
 
@@ -69,7 +69,8 @@ def vsi(
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> vs_x, vs_y = sdsp(x), sdsp(y)
+        >>> filtr = sdsp_filter(x)
+        >>> vs_x, vs_y = sdsp(x, filtr), sdsp(y, filtr)
         >>> kernel = gradient_kernel(scharr_kernel())
         >>> l = vsi(x, y, vs_x, vs_y, kernel)
         >>> l.size()
@@ -109,11 +110,34 @@ def vsi(
 
 
 @_jit
-def sdsp(
+def sdsp_filter(
     x: torch.Tensor,
-    value_range: float = 1.,
     omega_0: float = 0.021,
     sigma_f: float = 1.34,
+) -> torch.Tensor:
+    r"""Returns the log-Gabor filter for `sdsp`.
+
+    Args:
+        x: An input tensor, \((*, H, W)\).
+
+        For the remaining arguments, refer to [2].
+
+    Returns:
+        The filter tensor, \((H, W)\).
+    """
+
+    r, _ = filter_grid(x)
+    filtr = log_gabor(r, omega_0, sigma_f)
+    filtr = filtr * (r <= 0.5)  # low-pass filter
+
+    return filtr
+
+
+@_jit
+def sdsp(
+    x: torch.Tensor,
+    filtr: torch.Tensor,
+    value_range: float = 1.,
     sigma_c: float = 0.001,
     sigma_d: float = 145.,
 ) -> torch.Tensor:
@@ -121,6 +145,7 @@ def sdsp(
 
     Args:
         x: An input tensor, \((N, 3, H, W)\).
+        filtr: The frequency domain filter, \((H, W)\).
         value_range: The value range \(L\) of the input (usually 1. or 255).
 
         For the remaining arguments, refer to [2].
@@ -130,19 +155,16 @@ def sdsp(
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
-        >>> l = sdsp(x)
-        >>> l.size()
+        >>> filtr = sdsp_filter(x)
+        >>> vs = sdsp(x, filtr)
+        >>> vs.size()
         torch.Size([5, 256, 256])
     """
 
     x_lab = xyz_to_lab(rgb_to_xyz(x, value_range))
 
     # Frequency prior
-    w, _ = filter_grid(x_lab)
-    lg = log_gabor(w, omega_0, sigma_f)
-    lg = lg * (w <= 0.5)  # low-pass
-
-    x_f = fft.ifft2(fft.fft2(x_lab) * lg)
+    x_f = fft.ifft2(fft.fft2(x_lab) * filtr)
     x_f = cx.real(torch.view_as_real(x_f))
 
     s_f = torch.linalg.norm(x_f, dim=1)
@@ -150,10 +172,10 @@ def sdsp(
     # Color prior
     x_ab = x_lab[:, 1:]
 
-    lo, _ = x_ab.view(x_ab.shape[:2] + (-1,)).min(dim=-1)
-    up, _ = x_ab.view(x_ab.shape[:2] + (-1,)).max(dim=-1)
+    lo, _ = x_ab.flatten(-2).min(dim=-1)
+    up, _ = x_ab.flatten(-2).max(dim=-1)
 
-    lo = lo.view(x_ab.shape[:2] + (1, 1))
+    lo = lo.view(lo.shape + (1, 1))
     up = up.view(lo.shape)
     span = torch.where(up > lo, up - lo, torch.tensor(1.).to(lo))
 
@@ -164,7 +186,7 @@ def sdsp(
     # Location prior
     a, b = [
         torch.arange(n).to(x) - (n - 1) / 2
-        for n in x.shape[2:]
+        for n in x.shape[-2:]
     ]
 
     s_d = torch.exp(-(a[None, :] ** 2 + b[:, None] ** 2) / sigma_d ** 2)
@@ -215,6 +237,7 @@ class VSI(nn.Module):
             kernel = gradient_kernel(scharr_kernel())
 
         self.register_buffer('kernel', kernel)
+        self.register_buffer('filter', torch.zeros((0, 0)))
 
         self.convert = ColorConv('RGB', 'LMN')
         self.reduction = reduction
@@ -246,8 +269,11 @@ class VSI(nn.Module):
             target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
 
         # Visual saliancy
-        vs_input = sdsp(input, self.value_range)
-        vs_target = sdsp(target, self.value_range)
+        if self.filter.shape != (h, w):
+            self.filter = sdsp_filter(input)
+
+        vs_input = sdsp(input, self.filter, self.value_range)
+        vs_target = sdsp(target, self.filter, self.value_range)
 
         # RGB to LMN
         input = self.convert(input)
