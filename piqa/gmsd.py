@@ -167,6 +167,7 @@ class GMSD(nn.Module):
     RBG to Y, the luminance color space, and downsampled by a factor 2.
 
     Args:
+        downsample: Whether downsampling is enabled or not.
         kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Prewitt kernel instead.
         reduction: Specifies the reduction to apply to the output:
@@ -191,6 +192,7 @@ class GMSD(nn.Module):
 
     def __init__(
         self,
+        downsample: bool = True,
         kernel: torch.Tensor = None,
         reduction: str = 'mean',
         **kwargs,
@@ -204,6 +206,7 @@ class GMSD(nn.Module):
         self.register_buffer('kernel', kernel)
 
         self.convert = ColorConv('RGB', 'Y')
+        self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -225,8 +228,9 @@ class GMSD(nn.Module):
         )
 
         # Downsample
-        input = F.avg_pool2d(input, 2, ceil_mode=True)
-        target = F.avg_pool2d(target, 2, ceil_mode=True)
+        if self.downsample:
+            input = F.avg_pool2d(input, 2, ceil_mode=True)
+            target = F.avg_pool2d(target, 2, ceil_mode=True)
 
         # RGB to Y
         input = self.convert(input)

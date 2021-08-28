@@ -126,6 +126,7 @@ class HaarPSI(nn.Module):
 
     Args:
         chromatic: Whether to use the chromatic channels (IQ) or not.
+        downsample: Whether downsampling is enabled or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
@@ -149,6 +150,7 @@ class HaarPSI(nn.Module):
     def __init__(
         self,
         chromatic: bool = True,
+        downsample: bool = True,
         reduction: str = 'mean',
         **kwargs,
     ):
@@ -156,6 +158,7 @@ class HaarPSI(nn.Module):
         super().__init__()
 
         self.convert = ColorConv('RGB', 'YIQ' if chromatic else 'Y')
+        self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -177,8 +180,9 @@ class HaarPSI(nn.Module):
         )
 
         # Downsample
-        input = F.avg_pool2d(input, 2, ceil_mode=True)
-        target = F.avg_pool2d(target, 2, ceil_mode=True)
+        if self.downsample:
+            input = F.avg_pool2d(input, 2, ceil_mode=True)
+            target = F.avg_pool2d(target, 2, ceil_mode=True)
 
         # RGB to Y(IQ)
         input = self.convert(input)
