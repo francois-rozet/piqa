@@ -259,6 +259,7 @@ class FSIM(nn.Module):
 
     Args:
         chromatic: Whether to use the chromatic channels (IQ) or not.
+        downsample: Whether downsampling is enabled or not.
         kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Scharr kernel instead.
         reduction: Specifies the reduction to apply to the output:
@@ -279,6 +280,7 @@ class FSIM(nn.Module):
     def __init__(
         self,
         chromatic: bool = True,
+        downsample: bool = True,
         kernel: torch.Tensor = None,
         reduction: str = 'mean',
         **kwargs,
@@ -293,6 +295,7 @@ class FSIM(nn.Module):
         self.register_buffer('filters', torch.zeros((0, 0, 0, 0)))
 
         self.convert = ColorConv('RGB', 'YIQ' if chromatic else 'Y')
+        self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -314,19 +317,20 @@ class FSIM(nn.Module):
         )
 
         # Downsample
-        _, _, h, w = input.size()
-        M = round(min(h, w) / 256)
+        if self.downsample:
+            _, _, h, w = input.size()
+            M = round(min(h, w) / 256)
 
-        if M > 1:
-            input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
-            target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
+            if M > 1:
+                input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
+                target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
 
         # RGB to Y(IQ)
         input = self.convert(input)
         target = self.convert(target)
 
         # Phase congruency
-        if self.filters.shape[-2:] != (h, w):
+        if self.filters.shape[-2:] != input.shape[-2:]:
             self.filters = pc_filters(input)
 
         pc_input = phase_congruency(input[:, :1], self.filters, self.value_range)

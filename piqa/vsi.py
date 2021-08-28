@@ -207,6 +207,7 @@ class VSI(nn.Module):
     The visual saliency maps of the input and target are determined by `sdsp`.
 
     Args:
+        downsample: Whether downsampling is enabled or not.
         kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Scharr kernel instead.
         reduction: Specifies the reduction to apply to the output:
@@ -226,6 +227,7 @@ class VSI(nn.Module):
 
     def __init__(
         self,
+        downsample: bool = True,
         kernel: torch.Tensor = None,
         reduction: str = 'mean',
         **kwargs,
@@ -240,6 +242,7 @@ class VSI(nn.Module):
         self.register_buffer('filter', torch.zeros((0, 0)))
 
         self.convert = ColorConv('RGB', 'LMN')
+        self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -261,15 +264,16 @@ class VSI(nn.Module):
         )
 
         # Downsample
-        _, _, h, w = input.size()
-        M = round(min(h, w) / 256)
+        if self.downsample:
+            _, _, h, w = input.size()
+            M = round(min(h, w) / 256)
 
-        if M > 1:
-            input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
-            target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
+            if M > 1:
+                input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
+                target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
 
-        # Visual saliancy
-        if self.filter.shape != (h, w):
+        # Visual saliency
+        if self.filter.shape != input.shape[-2:]:
             self.filter = sdsp_filter(input)
 
         vs_input = sdsp(input, self.filter, self.value_range)

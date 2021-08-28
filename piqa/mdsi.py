@@ -126,6 +126,7 @@ class MDSI(nn.Module):
     RBG to LHM and downsampled by a factor \( \frac{\min(H, W)}{256} \).
 
     Args:
+        downsample: Whether downsampling is enabled or not.
         kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Prewitt kernel instead.
         reduction: Specifies the reduction to apply to the output:
@@ -150,6 +151,7 @@ class MDSI(nn.Module):
 
     def __init__(
         self,
+        downsample: bool = True,
         kernel: torch.Tensor = None,
         reduction: str = 'mean',
         **kwargs,
@@ -163,6 +165,7 @@ class MDSI(nn.Module):
         self.register_buffer('kernel', kernel)
 
         self.convert = ColorConv('RGB', 'LHM')
+        self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
@@ -184,12 +187,13 @@ class MDSI(nn.Module):
         )
 
         # Downsample
-        _, _, h, w = input.size()
-        M = round(min(h, w) / 256)
+        if self.downsample:
+            _, _, h, w = input.size()
+            M = round(min(h, w) / 256)
 
-        if M > 1:
-            input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
-            target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
+            if M > 1:
+                input = F.avg_pool2d(input, kernel_size=M, ceil_mode=True)
+                target = F.avg_pool2d(target, kernel_size=M, ceil_mode=True)
 
         # RGB to LHM
         input = self.convert(input)
