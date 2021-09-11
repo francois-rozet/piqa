@@ -54,8 +54,8 @@ def vsi(
     without downsampling and color space conversion.
 
     Args:
-        x: An input tensor, \((N, 3, H, W)\).
-        y: A target tensor, \((N, 3, H, W)\).
+        x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
+        y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
         vs_x: The input visual saliency, \((N, H, W)\).
         vs_y: The target visual saliency, \((N, H, W)\).
         kernel: A gradient kernel, \((2, 1, K, K)\).
@@ -80,8 +80,7 @@ def vsi(
     c2 *= value_range ** 2
     c3 *= value_range ** 2
 
-    l_x, mn_x = x[:, :1], x[:, 1:]
-    l_y, mn_y = y[:, :1], y[:, 1:]
+    l_x, l_y = x[:, :1], y[:, :1]
 
     # Visual saliency similarity
     vs_m = torch.max(vs_x, vs_y)
@@ -96,14 +95,19 @@ def vsi(
     s_g = (2 * g_x * g_y + c2) / (g_x ** 2 + g_y ** 2 + c2)
 
     # Chorminance similarity
-    s_c = (2 * mn_x * mn_y + c3) / (mn_x ** 2 + mn_y ** 2 + c3)
-    s_c = s_c.prod(dim=1)
+    if x.size(1) == 3:
+        mn_x, mn_y = x[:, 1:], y[:, 1:]
 
-    s_c = cx.complex(s_c, torch.zeros_like(s_c))
-    s_c_beta = cx.real(cx.pow(s_c, beta))
+        s_c = (2 * mn_x * mn_y + c3) / (mn_x ** 2 + mn_y ** 2 + c3)
+        s_c = s_c.prod(dim=1)
+
+        s_c = cx.complex(s_c, torch.zeros_like(s_c))
+        s_c_beta = cx.real(cx.pow(s_c, beta))
+
+        s_vs = s_vs * s_c_beta
 
     # Visual Saliency-based Index
-    s = s_vs * s_g ** alpha * s_c_beta
+    s = s_vs * s_g ** alpha
     vsi = (s * vs_m).sum(dim=(-1, -2)) / vs_m.sum(dim=(-1, -2))
 
     return vsi
@@ -202,11 +206,12 @@ class VSI(nn.Module):
     between an input and a target.
 
     Before applying `vsi`, the input and target are converted from
-    RBG to LMN and downsampled by a factor \( \frac{\min(H, W)}{256} \).
+    RBG to L(MN) and downsampled by a factor \( \frac{\min(H, W)}{256} \).
 
     The visual saliency maps of the input and target are determined by `sdsp`.
 
     Args:
+        chromatic: Whether to use the chromatic channels (MN) or not.
         downsample: Whether downsampling is enabled or not.
         kernel: A gradient kernel, \((2, 1, K, K)\).
             If `None`, use the Scharr kernel instead.
@@ -227,6 +232,7 @@ class VSI(nn.Module):
 
     def __init__(
         self,
+        chromatic: bool = True,
         downsample: bool = True,
         kernel: torch.Tensor = None,
         reduction: str = 'mean',
@@ -241,7 +247,7 @@ class VSI(nn.Module):
         self.register_buffer('kernel', kernel)
         self.register_buffer('filter', torch.zeros((0, 0)))
 
-        self.convert = ColorConv('RGB', 'LMN')
+        self.convert = ColorConv('RGB', 'LMN' if chromatic else 'L')
         self.downsample = downsample
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
@@ -279,7 +285,7 @@ class VSI(nn.Module):
         vs_input = sdsp(input, self.filter, self.value_range)
         vs_target = sdsp(target, self.filter, self.value_range)
 
-        # RGB to LMN
+        # RGB to L(MN)
         input = self.convert(input)
         target = self.convert(target)
 

@@ -46,18 +46,13 @@ RGB_TO_LMN = torch.tensor([
     [0.34, -0.6, 0.17],
 ])
 
-RGB_TO_LMN = torch.tensor([
-    [0.06, 0.63, 0.27],
-    [0.30, 0.04, -0.35],
-    [0.34, -0.6, 0.17],
-])
-
 
 _WEIGHTS = {
     ('RGB', 'YIQ'): RGB_TO_YIQ,  # HaarPSI
-    ('RGB', 'Y'): RGB_TO_YIQ[0:1],  # GMSD
+    ('RGB', 'Y'): RGB_TO_YIQ[:1],  # GMSD
     ('RGB', 'LHM'): RGB_TO_LHM,  # MDSI
     ('RGB', 'LMN'): RGB_TO_LMN,  # VSI
+    ('RGB', 'L'): RGB_TO_LMN[:1],  # VSI
 }
 
 

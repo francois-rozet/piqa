@@ -71,7 +71,7 @@ METRICS = {
     }),
     'LPIPS': (2, {
         # 'piq.LPIPS': piq.LPIPS(),
-        'IQA.LPIPS': IQA.LPIPSvgg(),
+        # 'IQA.LPIPS': IQA.LPIPSvgg(),
         'piqa.LPIPS': piqa.LPIPS(network='vgg')
     }),
     'GMSD': (2, {
