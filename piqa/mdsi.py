@@ -101,8 +101,8 @@ def mdsi(
     cs = cs_num / cs_den
 
     # Gradient-chromaticity similarity
-    gs = cx.complex(gs, torch.zeros_like(gs))
-    cs = cx.complex(cs, torch.zeros_like(cs))
+    gs = cx.complx(gs, torch.zeros_like(gs))
+    cs = cx.complx(cs, torch.zeros_like(cs))
 
     if combination == 'prod':
         gcs = cx.prod(cx.pow(gs, gamma), cx.pow(cs, beta))

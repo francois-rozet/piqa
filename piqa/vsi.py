@@ -101,7 +101,7 @@ def vsi(
         s_c = (2 * mn_x * mn_y + c3) / (mn_x ** 2 + mn_y ** 2 + c3)
         s_c = s_c.prod(dim=1)
 
-        s_c = cx.complex(s_c, torch.zeros_like(s_c))
+        s_c = cx.complx(s_c, torch.zeros_like(s_c))
         s_c_beta = cx.real(cx.pow(s_c, beta))
 
         s_vs = s_vs * s_c_beta

@@ -5,7 +5,7 @@ which implements the functions and/or classes related to a
 specific image quality assessement metric.
 """
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 from .tv import TV
 from .psnr import PSNR

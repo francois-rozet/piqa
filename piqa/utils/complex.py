@@ -4,7 +4,7 @@ r"""Differentiable and JITable complex tensor API
 import torch
 
 
-def complex(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
+def complx(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
     r"""Returns a complex tensor with its real part equal to \(\Re\) and
     its imaginary part equal to \(\Im\).
 
@@ -20,7 +20,7 @@ def complex(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
     Example:
         >>> x = torch.tensor([2., 0.7071])
         >>> y = torch.tensor([0., 0.7071])
-        >>> complex(x, y)
+        >>> complx(x, y)
         tensor([[2.0000, 0.0000],
                 [0.7071, 0.7071]])
     """
@@ -103,7 +103,7 @@ def turn(x: torch.Tensor) -> torch.Tensor:
                 [-0.7071,  0.7071]])
     """
 
-    return complex(-imag(x), real(x))
+    return complx(-imag(x), real(x))
 
 
 def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
@@ -127,7 +127,7 @@ def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
                 [0.7071, 0.7071]])
     """
 
-    return complex(r * torch.cos(phi), r * torch.sin(phi))
+    return complx(r * torch.cos(phi), r * torch.sin(phi))
 
 
 def mod(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
@@ -200,7 +200,7 @@ def prod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     x_r, x_i = x[..., 0], x[..., 1]
     y_r, y_i = y[..., 0], y[..., 1]
 
-    return complex(x_r * y_r - x_i * y_i, x_i * y_r + x_r * y_i)
+    return complx(x_r * y_r - x_i * y_i, x_i * y_r + x_r * y_i)
 
 
 def dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:

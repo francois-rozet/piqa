@@ -44,7 +44,7 @@ METRICS = {
     'PSNR': (2, {
         'sk.psnr-np': sk.peak_signal_noise_ratio,
         'piq.psnr': piq.psnr,
-        'kornia.PSNR': kornia.PSNRLoss(max_val=1.),
+        'kornia.PSNR': kornia.PSNRLoss(1.),
         'piqa.PSNR': piqa.PSNR(),
     }),
     'SSIM': (2, {
@@ -55,10 +55,7 @@ METRICS = {
             gaussian_weights=True,
         ),
         'piq.ssim': lambda x, y: piq.ssim(x, y, downsample=False),
-        'kornia.SSIM-halfloss': kornia.SSIM(
-            window_size=11,
-            reduction='mean',
-        ),
+        'kornia.SSIM-halfloss': kornia.SSIMLoss(11),
         'IQA.SSIM-loss': IQA.SSIM(),
         'vainf.SSIM': vainf.SSIM(data_range=1.),
         'piqa.SSIM': piqa.SSIM(),

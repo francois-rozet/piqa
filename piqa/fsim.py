@@ -105,7 +105,7 @@ def fsim(
         s_q = (2 * q_x * q_y + t4) / (q_x ** 2 + q_y ** 2 + t4)
 
         s_iq = s_i * s_q
-        s_iq = cx.complex(s_iq, torch.zeros_like(s_iq))
+        s_iq = cx.complx(s_iq, torch.zeros_like(s_iq))
         s_iq_lambda =  cx.real(cx.pow(s_iq, lmbda))
 
         s_l = s_l * s_iq_lambda
