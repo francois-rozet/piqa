@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 from piqa.utils.functional import (
     gaussian_kernel,
     kernel_views,
@@ -251,7 +251,7 @@ class SSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.kernel.device,
             dim_range=(3, -1),
@@ -261,7 +261,7 @@ class SSIM(nn.Module):
 
         l = ssim(input, target, kernel=self.kernel, **self.kwargs)[0]
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)
 
 
 class MS_SSIM(nn.Module):
@@ -331,7 +331,7 @@ class MS_SSIM(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.kernel.device,
             dim_range=(4, 4),
@@ -347,4 +347,4 @@ class MS_SSIM(nn.Module):
             **self.kwargs,
         )
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)

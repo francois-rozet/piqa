@@ -18,7 +18,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.hub as hub
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 
 from typing import Dict, List
 
@@ -207,7 +207,7 @@ class LPIPS(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.shift.device,
             dim_range=(4, 4),
@@ -232,4 +232,4 @@ class LPIPS(nn.Module):
 
         l = torch.stack(residuals, dim=-1).sum(dim=-1)
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)

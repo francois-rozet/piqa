@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 from piqa.utils.color import ColorConv
 from piqa.utils.functional import (
     haar_kernel,
@@ -171,7 +171,7 @@ class HaarPSI(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.convert.device,
             dim_range=(4, 4),
@@ -191,4 +191,4 @@ class HaarPSI(nn.Module):
         # HaarPSI
         l = haarpsi(input, target, **self.kwargs)
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)

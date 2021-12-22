@@ -83,6 +83,9 @@ class ColorConv(nn.Module):
         return self.weight.device
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        r"""Defines the computation performed at every call.
+        """
+
         return color_conv(x, self.weight)
 
 

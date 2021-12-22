@@ -129,3 +129,10 @@ If you need the absolute best performances, the assertions can be disabled with 
 ```bash
 python -O your_awesome_code_using_piqa.py
 ```
+
+Alternatively, you can disable PIQA's type assertions within your code with
+
+```python
+from piqa.utils import set_debug
+set_debug(False)
+```
