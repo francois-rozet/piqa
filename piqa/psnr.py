@@ -9,7 +9,7 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 
 
 @_jit
@@ -109,7 +109,7 @@ class PSNR(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=input.device,
             dim_range=(1, -1),
@@ -118,4 +118,4 @@ class PSNR(nn.Module):
 
         l = psnr(input, target, **self.kwargs)
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)

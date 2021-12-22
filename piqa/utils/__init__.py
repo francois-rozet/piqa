@@ -13,14 +13,25 @@ else:
     _jit = lambda f: f
 
 
-def _debug(mode: bool = __debug__) -> bool:
-    r"""Returns whether debugging is enabled or not.
+__piqa_debug__ = __debug__
+
+def set_debug(mode: bool = False) -> bool:
+    r"""Sets and returns whether debugging is enabled or not.
+    If `__debug__` is `False`, this function has not effect.
+
+    Example:
+        >>> set_debug(False)
+        False
     """
 
-    return mode
+    global __piqa_debug__
+
+    __piqa_debug__ = __debug__ and mode
+
+    return __piqa_debug__
 
 
-def _assert_type(
+def assert_type(
     tensors: List[torch.Tensor],
     device: torch.device,
     dim_range: Tuple[int, int] = (0, -1),
@@ -33,60 +44,60 @@ def _assert_type(
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
-        >>> _assert_type([x, y], device=x.device, dim_range=(4, 4), n_channels=3)
+        >>> assert_type([x, y], device=x.device, dim_range=(4, 4), n_channels=3)
     """
 
-    if not _debug():
+    if not __piqa_debug__:
         return
 
     ref = tensors[0]
 
     for t in tensors:
         assert t.device == device, (
-            f'Expected tensors to be on {device}, got {t.device}'
+            f'Tensors expected to be on {device}, got {t.device}'
         )
 
         assert t.shape == ref.shape, (
-            'Expected tensors to be of the same shape, got'
+            'Tensors expected to be of the same shape, got'
             f' {ref.shape} and {t.shape}'
         )
 
         if dim_range[0] == dim_range[1]:
             assert t.dim() == dim_range[0], (
-                'Expected number of dimensions to be'
+                'Number of dimensions expected to be'
                 f' {dim_range[0]}, got {t.dim()}'
             )
         elif dim_range[0] < dim_range[1]:
             assert dim_range[0] <= t.dim() <= dim_range[1], (
-                'Expected number of dimensions to be between'
+                'Number of dimensions expected to be between'
                 f' {dim_range[0]} and {dim_range[1]}, got {t.dim()}'
             )
         elif dim_range[0] > 0:
             assert dim_range[0] <= t.dim(), (
-                'Expected number of dimensions to be greater or equal to'
+                'Number of dimensions expected to be greater or equal to'
                 f' {dim_range[0]}, got {t.dim()}'
             )
 
         if n_channels > 0:
             assert t.size(1) == n_channels, (
-                'Expected number of channels to be'
+                'Number of channels expected to be'
                 f' {n_channels}, got {t.size(1)}'
             )
 
         if value_range[0] < value_range[1]:
             assert value_range[0] <= t.min(), (
-                'Expected values to be greater or equal to'
+                'Values expected to be greater or equal to'
                 f' {value_range[0]}, got {t.min()}'
             )
 
             assert t.max() <= value_range[1], (
-                'Expected values to be lower or equal to'
+                'Values expected to be lower or equal to'
                 f' {value_range[1]}, got {t.max()}'
             )
 
 
 @_jit
-def _reduce(x: torch.Tensor, reduction: str = 'mean') -> torch.Tensor:
+def reduce_tensor(x: torch.Tensor, reduction: str = 'mean') -> torch.Tensor:
     r"""Returns the reduction of \(x\).
 
     Args:
@@ -96,7 +107,7 @@ def _reduce(x: torch.Tensor, reduction: str = 'mean') -> torch.Tensor:
 
     Example:
         >>> x = torch.arange(5)
-        >>> _reduce(x, reduction='sum')
+        >>> reduce_tensor(x, reduction='sum')
         tensor(10)
     """
 

@@ -3,7 +3,6 @@
 r"""Benchmark against other packages
 
 Packages:
-    scikit-image: https://pypi.org/project/scikit-image/
     kornia: https://pypi.org/project/kornia/
     piq: https://pypi.org/project/piq/
     IQA-pytorch: https://pypi.org/project/IQA-pytorch/
@@ -22,7 +21,6 @@ import urllib.request as request
 from torchvision import transforms
 from PIL import Image, ImageFilter
 
-import skimage.metrics as sk
 import kornia.losses as kornia
 import piq
 import IQA_pytorch as IQA
@@ -42,18 +40,11 @@ METRICS = {
         'piqa.TV': piqa.TV(),
     }),
     'PSNR': (2, {
-        'sk.psnr-np': sk.peak_signal_noise_ratio,
         'piq.psnr': piq.psnr,
         'kornia.PSNR': kornia.PSNRLoss(1.),
         'piqa.PSNR': piqa.PSNR(),
     }),
     'SSIM': (2, {
-        'sk.ssim-np': lambda x, y: sk.structural_similarity(
-            x, y,
-            win_size=11,
-            multichannel=True,
-            gaussian_weights=True,
-        ),
         'piq.ssim': lambda x, y: piq.ssim(x, y, downsample=False),
         'kornia.SSIM-halfloss': kornia.SSIMLoss(11),
         'IQA.SSIM-loss': IQA.SSIM(),

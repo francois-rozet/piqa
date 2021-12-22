@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 from piqa.utils.color import ColorConv
 from piqa.utils.functional import (
     prewitt_kernel,
@@ -219,7 +219,7 @@ class GMSD(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.kernel.device,
             dim_range=(4, 4),
@@ -239,7 +239,7 @@ class GMSD(nn.Module):
         # GMSD
         l = gmsd(input, target, kernel=self.kernel, **self.kwargs)
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)
 
 
 class MS_GMSD(nn.Module):
@@ -310,7 +310,7 @@ class MS_GMSD(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.kernel.device,
             dim_range=(4, 4),
@@ -331,4 +331,4 @@ class MS_GMSD(nn.Module):
             **self.kwargs,
         )
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)

@@ -23,7 +23,7 @@ import torch.fft as fft
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, _assert_type, _reduce
+from piqa.utils import _jit, assert_type, reduce_tensor
 from piqa.utils.color import ColorConv, rgb_to_xyz, xyz_to_lab
 from piqa.utils.functional import (
     scharr_kernel,
@@ -261,7 +261,7 @@ class VSI(nn.Module):
         r"""Defines the computation performed at every call.
         """
 
-        _assert_type(
+        assert_type(
             [input, target],
             device=self.kernel.device,
             dim_range=(4, 4),
@@ -292,4 +292,4 @@ class VSI(nn.Module):
         # VSI
         l = vsi(input, target, vs_input, vs_target, kernel=self.kernel, **self.kwargs)
 
-        return _reduce(l, self.reduction)
+        return reduce_tensor(l, self.reduction)
