@@ -1,35 +1,33 @@
 ---
 name: 🐛 Bug report
 about: Report a bug to help PIQA improve
-title: <issue> using <module>.<component>
+title: [BUG] <issue> using <module>.<component>
 labels: bug
 ---
 
-### 🐛 Bug
-
-#### Description
+### Description
 
 A clear description of what the bug is.
 
-#### Reproduce
+### Reproduce
 
 A minimal working example demonstrating the current behavior.
 
 ```python
 from piqa import module
 ...
-y = module.component(x) # bug happens
+y = module.component(x)  # bug happens
 ```
 
-#### Expected behavior
+### Expected behavior
 
 A clear description of what you expected to happen.
 
-#### Causes and solution
+### Causes and solution
 
 If you know the causes and/or a solution to the bug, present them.
 
-#### Environment
+### Environment
 
 * PIQA version: [e.g. 1.0.7]
 * Python version: [e.g. 3.6.4]

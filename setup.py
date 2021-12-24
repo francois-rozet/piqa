@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import os
 import setuptools
-import piqa
 
 with open('README.md', 'r') as f:
     readme = f.read()
@@ -12,20 +10,29 @@ with open('requirements.txt', 'r') as f:
 
 setuptools.setup(
     name='piqa',
-    version=piqa.__version__,
+    version='1.1.8',
+    packages=setuptools.find_packages(),
     description='PyTorch Image Quality Assessment',
+    keywords='image quality processing metrics torch vision',
     long_description=readme,
     long_description_content_type='text/markdown',
-    keywords='pytorch image processing metrics',
     author='François Rozet',
     author_email='francois.rozet@outlook.com',
+    license='MIT license',
     url='https://github.com/francois-rozet/piqa',
-    install_requires=required,
-    packages=setuptools.find_packages(),
+    project_urls={
+        'Documentation': 'https://github.com/francois-rozet/piqa',
+        'Source': 'https://github.com/francois-rozet/piqa',
+        'Tracker': 'https://github.com/francois-rozet/piqa/issues',
+    },
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: MIT License',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
     ],
+    install_requires=required,
     python_requires='>=3.6',
 )
