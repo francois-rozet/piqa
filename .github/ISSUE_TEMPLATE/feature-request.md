@@ -1,21 +1,21 @@
 ---
-name: ✨ Feature request
-about: Suggest a feature or improvement
-title: <suggestion> for <module>.<component>
+name: "✨ Feature request"
+about: "Suggest a feature or improvement"
+title: "[FEAT] <suggestion> for <module.component>"
 labels: enhancement
+assignees: ''
+
 ---
 
-### ✨ Feature
-
-#### Description
+### Description
 
 A clear description of the feature/improvement is and what **motivates** it.
 
-#### Implementation
+### Implementation
 
 A clear description of how you would like the feature to be implemented.
 If possible, provide reference examples (*e.g.* repository, issue, paper, ...).
 
-#### Alternatives
+### Alternatives
 
 A clear description of any alternative solutions you've considered.
