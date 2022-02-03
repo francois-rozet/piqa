@@ -2,36 +2,34 @@ r"""Mean Deviation Similarity Index (MDSI)
 
 This module implements the MDSI in PyTorch.
 
-Credits:
-    Inspired by the [official implementation](https://www.mathworks.com/matlabcentral/fileexchange/59809-mdsi-ref-dist-combmethod)
+Original:
+    https://www.mathworks.com/matlabcentral/fileexchange/59809-mdsi-ref-dist-combmethod
 
 References:
-    [1] Mean Deviation Similarity Index:
-    Efficient and Reliable Full-Reference Image Quality Evaluator
-    (Nafchi et al., 2016)
-    https://arxiv.org/abs/1608.07433
+    .. [Nafchi2016] Mean Deviation Similarity Index: Efficient and Reliable Full-Reference Image Quality Evaluator (Nafchi et al., 2016)
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-from piqa.utils.color import ColorConv
-from piqa.utils.functional import (
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
+from .utils import complex as cx
+from .utils.color import ColorConv
+from .utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
 )
 
-import piqa.utils.complex as cx
-
 
 @_jit
 def mdsi(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    kernel: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
+    kernel: Tensor,
     combination: str = 'sum',
     value_range: float = 1.,
     c1: float = 140. / (255. ** 2),
@@ -43,22 +41,23 @@ def mdsi(
     rho: float = 1.,
     q: float = 0.25,
     o: float = 0.25,
-) -> torch.Tensor:
-    r"""Returns the MDSI between \(x\) and \(y\),
+) -> Tensor:
+    r"""Returns the MDSI between :math:`x` and :math:`y`,
     without downsampling and color space conversion.
 
     Args:
-        x: An input tensor, \((N, 3, H, W)\).
-        y: A target tensor, \((N, 3, H, W)\).
-        kernel: A gradient kernel, \((2, 1, K, K)\).
+        x: An input tensor, :math:`(N, 3, H, W)`.
+        y: A target tensor, :math:`(N, 3, H, W)`.
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
         combination: Specifies the scheme to combine the gradient
             and chromaticity similarities (GS, CS): `'sum'` | `'prod'`.
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [1].
+    Note:
+        For the remaining arguments, refer to [Nafchi2016]_.
 
     Returns:
-        The MDSI vector, \((N,)\).
+        The MDSI vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
@@ -122,22 +121,23 @@ class MDSI(nn.Module):
     r"""Creates a criterion that measures the MDSI
     between an input and a target.
 
-    Before applying `mdsi`, the input and target are converted from
-    RBG to LHM and downsampled by a factor \( \frac{\min(H, W)}{256} \).
+    Before applying :func:`mdsi`, the input and target are converted from
+    RBG to LHM and downsampled by a factor :math:`\frac{\min(H, W)}{256}`.
 
     Args:
         downsample: Whether downsampling is enabled or not.
-        kernel: A gradient kernel, \((2, 1, K, K)\).
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
             If `None`, use the Prewitt kernel instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `mdsi`.
+    Note:
+        `**kwargs` are passed to :func:`mdsi`.
 
     Shapes:
-        * Input: \((N, 3, H, W)\)
-        * Target: \((N, 3, H, W)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
+        input: :math:`(N, 3, H, W)`
+        target: :math:`(N, 3, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = MDSI().cuda()
@@ -152,11 +152,10 @@ class MDSI(nn.Module):
     def __init__(
         self,
         downsample: bool = True,
-        kernel: torch.Tensor = None,
+        kernel: Tensor = None,
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         if kernel is None:
@@ -170,16 +169,9 @@ class MDSI(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.kernel.device,
             dim_range=(4, 4),
             n_channels=3,

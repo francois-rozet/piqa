@@ -9,32 +9,36 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from piqa.utils import _jit, assert_type, reduce_tensor
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
 
 
 @_jit
-def tv(x: torch.Tensor, norm: str = 'L1') -> torch.Tensor:
-    r"""Returns the TV of \(x\).
+def tv(x: Tensor, norm: str = 'L1') -> Tensor:
+    r"""Returns the TV of :math:`x`.
 
-    With `L1`,
+    With `'L1'`,
 
-    $$ \text{TV}(x) = \sum_{i, j}
-        \left| x_{i+1, j} - x_{i, j} \right| +
-        \left| x_{i, j+1} - x_{i, j} \right| $$
+    .. math::
+        \text{TV}(x) = \sum_{i, j}
+            \left| x_{i+1, j} - x_{i, j} \right| +
+            \left| x_{i, j+1} - x_{i, j} \right|
 
-    Alternatively, with `L2`,
+    Alternatively, with `'L2'`,
 
-    $$ \text{TV}(x) = \left( \sum_{c, i, j}
-        (x_{c, i+1, j} - x_{c, i, j})^2 + (x_{c, i, j+1} - x_{c, i, j})^2
-        \right)^{\frac{1}{2}} $$
+    .. math::
+        \text{TV}(x) = \left( \sum_{c, i, j}
+            (x_{c, i+1, j} - x_{c, i, j})^2 +
+            (x_{c, i, j+1} - x_{c, i, j})^2 \right)^{\frac{1}{2}}
 
     Args:
-        x: An input tensor, \((*, C, H, W)\).
+        x: An input tensor, :math:`(*, C, H, W)`.
         norm: Specifies the norm funcion to apply:
             `'L1'` | `'L2'` | `'L2_squared'`.
 
     Returns:
-        The TV tensor, \((*,)\).
+        The TV tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -43,8 +47,8 @@ def tv(x: torch.Tensor, norm: str = 'L1') -> torch.Tensor:
         torch.Size([5])
     """
 
-    w_var = x[..., :, 1:] - x[..., :, :-1]
-    h_var = x[..., 1:, :] - x[..., :-1, :]
+    w_var = torch.diff(x, dim=-1)
+    h_var = torch.diff(x, dim=-2)
 
     if norm == 'L1':
         w_var = w_var.abs()
@@ -68,11 +72,12 @@ class TV(nn.Module):
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `tv`.
+    Note:
+        `**kwargs` are passed to :func:`tv`.
 
     Shapes:
-        * Input: \((*, C, H, W)\)
-        * Output: \((*,)\) or \(()\) depending on `reduction`
+        input: :math:`(*, C, H, W)`
+        output: :math:`(*,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = TV()
@@ -84,17 +89,13 @@ class TV(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
-        r""""""
         super().__init__()
 
         self.reduction = reduction
         self.kwargs = kwargs
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
-        assert_type([input], device=input.device, dim_range=(3, -1))
+    def forward(self, input: Tensor) -> Tensor:
+        assert_type(input, dim_range=(3, -1))
 
         l = tv(input, **self.kwargs)
 

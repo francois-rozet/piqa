@@ -2,26 +2,25 @@ r"""Haar Perceptual Similarity Index (HaarPSI)
 
 This module implements the HaarPSI in PyTorch.
 
+Original:
+    https://github.com/rgcda/haarpsi
+
 Wikipedia:
     https://en.wikipedia.org/wiki/Haar_wavelet
 
-Credits:
-    Inspired by [haarpsi](https://github.com/rgcda/haarpsi)
-
 References:
-    [1] A Haar Wavelet-Based Perceptual Similarity Index for
-    Image Quality Assessment
-    (Reisenhofer et al., 2018)
-    https://arxiv.org/abs/1607.06140
+    .. [Reisenhofer2018] A Haar Wavelet-Based Perceptual Similarity Index for Image Quality Assessment (Reisenhofer et al., 2018)
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-from piqa.utils.color import ColorConv
-from piqa.utils.functional import (
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
+from .utils.color import ColorConv
+from .utils.functional import (
     haar_kernel,
     gradient_kernel,
     channel_conv,
@@ -30,26 +29,27 @@ from piqa.utils.functional import (
 
 @_jit
 def haarpsi(
-    x: torch.Tensor,
-    y: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
     n_kernels: int = 3,
     value_range: float = 1.,
     c: float = 30. / (255. ** 2),
     alpha: float = 4.2,
-) -> torch.Tensor:
-    r"""Returns the HaarPSI between \(x\) and \(y\),
+) -> Tensor:
+    r"""Returns the HaarPSI between :math:`x` and :math:`y`,
     without color space conversion.
 
     Args:
-        x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
-        y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
+        x: An input tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
+        y: A target tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
         n_kernels: The number of Haar wavelet kernels to use.
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [1].
+    Note:
+        For the remaining arguments, refer to [Reisenhofer2018]_.
 
     Returns:
-        The HaarPSI vector, \((N,)\).
+        The HaarPSI vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -121,7 +121,7 @@ class HaarPSI(nn.Module):
     r"""Creates a criterion that measures the HaarPSI
     between an input and a target.
 
-    Before applying `haarpsi`, the input and target are converted from
+    Before applying :func:`haarpsi`, the input and target are converted from
     RBG to Y(IQ) and downsampled by a factor 2.
 
     Args:
@@ -130,12 +130,13 @@ class HaarPSI(nn.Module):
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `haarpsi`.
+    Note:
+        `**kwargs` are passed to :func:`haarpsi`.
 
     Shapes:
-        * Input: \((N, 3, H, W)\)
-        * Target: \((N, 3, H, W)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
+        input: :math:`(N, 3, H, W)`
+        target: :math:`(N, 3, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = HaarPSI().cuda()
@@ -154,7 +155,6 @@ class HaarPSI(nn.Module):
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         self.convert = ColorConv('RGB', 'YIQ' if chromatic else 'Y')
@@ -163,16 +163,9 @@ class HaarPSI(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.convert.device,
             dim_range=(4, 4),
             n_channels=3,

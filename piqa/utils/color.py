@@ -1,28 +1,32 @@
-r"""Color space conversion tools
-"""
+r"""Color space conversion tools"""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch import Tensor
 from typing import Tuple
 
 
-def spatial(x: torch.Tensor) -> int:
-    r"""Returns the number of spatial dimensions of \(x\)."""
+def spatial(x: Tensor) -> int:
+    r"""Returns the number of spatial dimensions of :math:`x`.
+
+    Args:
+        x: A tensor, :math:`(N, C, *)`.
+    """
 
     return len(x.shape) - 2
 
 
 def color_conv(
-    x: torch.Tensor,
-    weight: torch.Tensor,
-) -> torch.Tensor:
-    r"""Returns the color convolution of \(x\) with the kernel `weight`.
+    x: Tensor,
+    weight: Tensor,
+) -> Tensor:
+    r"""Returns the color convolution of :math:`x` with the kernel `weight`.
 
     Args:
-        x: A tensor, \((N, C, *)\).
-        weight: A weight kernel, \((C', C)\).
+        x: A tensor, :math:`(N, C, *)`.
+        weight: A weight kernel, :math:`(C', C)`.
     """
 
     return F.conv1d(x, weight.view(weight.shape + (1,) * spatial(x)))
@@ -60,8 +64,8 @@ class ColorConv(nn.Module):
     r"""Color convolution module.
 
     Args:
-        src: The source color space. E.g. `RGB`.
-        dst: The destination color space. E.g. `YIQ`.
+        src: The source color space (e.g. `'RGB'`).
+        dst: The destination color space (e.g. `'YIQ'`).
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -74,7 +78,7 @@ class ColorConv(nn.Module):
     def __init__(self, src: str, dst: str):
         super().__init__()
 
-        assert (src, dst) in _WEIGHTS, f'Unknown {src} to {dst} conversion'
+        assert (src, dst) in _WEIGHTS, f"Unknown {src} to {dst} conversion"
 
         self.register_buffer('weight', _WEIGHTS[(src, dst)])
 
@@ -82,17 +86,14 @@ class ColorConv(nn.Module):
     def device(self) -> torch.device:
         return self.weight.device
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, x: Tensor) -> Tensor:
         return color_conv(x, self.weight)
 
 
-def rgb_to_xyz(x: torch.Tensor, value_range: float = 1.) -> torch.Tensor:
+def rgb_to_xyz(x: Tensor, value_range: float = 1.) -> Tensor:
     r"""Converts from sRGB to (CIE) XYZ.
 
-    References:
+    Wikipedia:
         https://en.wikipedia.org/wiki/SRGB
     """
 
@@ -114,12 +115,12 @@ def rgb_to_xyz(x: torch.Tensor, value_range: float = 1.) -> torch.Tensor:
 
 
 def xyz_to_lab(
-    x: torch.Tensor,
+    x: Tensor,
     illuminants: Tuple[float, float, float] = (0.956797052643698, 1., 0.9214805860173273),
-) -> torch.Tensor:
+) -> Tensor:
     r"""Converts from (CIE) XYZ to (CIE) LAB.
 
-    References:
+    Wikipedia:
         https://en.wikipedia.org/wiki/CIELAB_color_space
     """
 

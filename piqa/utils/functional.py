@@ -1,24 +1,24 @@
-r"""General purpose tensor functionals
-"""
+r"""General purpose tensor functionals"""
 
 import torch
 import torch.fft as fft
 import torch.nn as nn
 import torch.nn.functional as F
 
-from typing import List, Tuple  #, Union
+from torch import Tensor
+from typing import List, Tuple, Union
 
 
 def channel_conv(
-    x: torch.Tensor,
-    kernel: torch.Tensor,
+    x: Tensor,
+    kernel: Tensor,
     padding: int = 0,  # Union[int, Tuple[int, ...]]
-) -> torch.Tensor:
-    r"""Returns the channel-wise convolution of \(x\) with the kernel `kernel`.
+) -> Tensor:
+    r"""Returns the channel-wise convolution of :math:`x` with the kernel `kernel`.
 
     Args:
-        x: A tensor, \((N, C, *)\).
-        kernel: A kernel, \((C', 1, *)\).
+        x: A tensor, :math:`(N, C, *)`.
+        kernel: A kernel, :math:`(C', 1, *)`.
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
@@ -40,16 +40,16 @@ def channel_conv(
 
 
 def channel_convs(
-    x: torch.Tensor,
-    kernels: List[torch.Tensor],
+    x: Tensor,
+    kernels: List[Tensor],
     padding: int = 0,  # Union[int, Tuple[int, ...]]
-) -> torch.Tensor:
-    r"""Returns the channel-wise convolution of \(x\) with
+) -> Tensor:
+    r"""Returns the channel-wise convolution of :math:`x` with
     the series of kernel `kernels`.
 
     Args:
-        x: A tensor, \((N, C, *)\).
-        kernels: A list of kernels, each \((C', 1, *)\).
+        x: A tensor, :math:`(N, C, *)`.
+        kernels: A list of kernels, each :math:`(C', 1, *)`.
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
@@ -80,28 +80,28 @@ def channel_convs(
 def gaussian_kernel(
     size: int,
     sigma: float = 1.
-) -> torch.Tensor:
-    r"""Returns the 1-dimensional Gaussian kernel of size \(K\).
+) -> Tensor:
+    r"""Returns the 1-dimensional Gaussian kernel of size :math:`K`.
 
-    $$ G(x) = \gamma \exp
-        \left(\frac{(x - \mu)^2}{2 \sigma^2}\right) $$
+    .. math::
+        G(x) = \gamma \exp \left(\frac{(x - \mu)^2}{2 \sigma^2}\right)
 
-    where \(\gamma\) is such that
+    where :math:`\gamma` is such that
 
-    $$ \sum_{x = 1}^{K} G(x) = 1 $$
+    .. math:: \sum_{x = 1}^{K} G(x) = 1
 
-    and \(\mu = \frac{1 + K}{2}\).
+    and :math:`\mu = \frac{1 + K}{2}`.
 
     Args:
-        size: The kernel size \(K\).
-        sigma: The standard deviation \(\sigma\) of the distribution.
+        size: The kernel size :math:`K`.
+        sigma: The standard deviation :math:`\sigma` of the distribution.
 
     Returns:
-        The kernel vector, \((K,)\).
+        The kernel vector, :math:`(K,)`.
 
     Note:
-        An \(N\)-dimensional Gaussian kernel is separable, meaning that
-        applying it is equivalent to applying a series of \(N\) 1-dimensional
+        An :math:`N`-dimensional Gaussian kernel is separable, meaning that
+        applying it is equivalent to applying a series of :math:`N` 1-dimensional
         Gaussian kernels, which has a lower computational complexity.
 
     Wikipedia:
@@ -121,17 +121,16 @@ def gaussian_kernel(
     return kernel
 
 
-def kernel_views(kernel: torch.Tensor, n: int = 2) -> List[torch.Tensor]:
-    r"""Returns the \(N\)-dimensional views of the 1-dimensional
+def kernel_views(kernel: Tensor, n: int = 2) -> List[Tensor]:
+    r"""Returns the :math:`N`-dimensional views of the 1-dimensional
     kernel `kernel`.
 
     Args:
-        kernel: A kernel, \((C, 1, K)\).
-        n: The number of dimensions \(N\).
+        kernel: A kernel, :math:`(C, 1, K)`.
+        n: The number of dimensions :math:`N`.
 
     Returns:
-        The list of views, each \((C, 1, \underbrace{1, \dots, 1}_{i}, K,
-        \underbrace{1, \dots, 1}_{N - i - 1})\).
+        The list of views, each :math:`(C, 1, \underbrace{1, \dots, 1}_{i}, K, \underbrace{1, \dots, 1}_{N - i - 1})`.
 
     Example:
         >>> kernel = gaussian_kernel(5, sigma=1.5).repeat(3, 1, 1)
@@ -161,14 +160,14 @@ def kernel_views(kernel: torch.Tensor, n: int = 2) -> List[torch.Tensor]:
     return views
 
 
-def haar_kernel(size: int) -> torch.Tensor:
+def haar_kernel(size: int) -> Tensor:
     r"""Returns the horizontal Haar kernel.
 
     Args:
-        size: The kernel (even) size \(K\).
+        size: The kernel (even) size :math:`K`.
 
     Returns:
-        The kernel, \((K, K)\).
+        The kernel, :math:`(K, K)`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Haar_wavelet
@@ -185,11 +184,11 @@ def haar_kernel(size: int) -> torch.Tensor:
     )
 
 
-def prewitt_kernel() -> torch.Tensor:
+def prewitt_kernel() -> Tensor:
     r"""Returns the Prewitt kernel.
 
     Returns:
-        The kernel, \((3, 3)\).
+        The kernel, :math:`(3, 3)`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Prewitt_operator
@@ -207,11 +206,11 @@ def prewitt_kernel() -> torch.Tensor:
     )
 
 
-def sobel_kernel() -> torch.Tensor:
+def sobel_kernel() -> Tensor:
     r"""Returns the Sobel kernel.
 
     Returns:
-        The kernel, \((3, 3)\).
+        The kernel, :math:`(3, 3)`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Sobel_operator
@@ -229,11 +228,11 @@ def sobel_kernel() -> torch.Tensor:
     )
 
 
-def scharr_kernel() -> torch.Tensor:
+def scharr_kernel() -> Tensor:
     r"""Returns the Scharr kernel.
 
     Returns:
-        The kernel, \((3, 3)\).
+        The kernel, :math:`(3, 3)`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Scharr_operator
@@ -251,14 +250,14 @@ def scharr_kernel() -> torch.Tensor:
     )
 
 
-def gradient_kernel(kernel: torch.Tensor) -> torch.Tensor:
+def gradient_kernel(kernel: Tensor) -> Tensor:
     r"""Returns `kernel` transformed into a gradient.
 
     Args:
-        kernel: A convolution kernel, \((K, K)\).
+        kernel: A convolution kernel, :math:`(K, K)`.
 
     Returns:
-        The gradient kernel, \((2, 1, K, K)\).
+        The gradient kernel, :math:`(2, 1, K, K)`.
 
     Example:
         >>> g = gradient_kernel(prewitt_kernel())
@@ -269,14 +268,14 @@ def gradient_kernel(kernel: torch.Tensor) -> torch.Tensor:
     return torch.stack([kernel, kernel.t()]).unsqueeze(1)
 
 
-def filter_grid(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    r"""Returns the (quadrant-shifted) frequency grid for \(x\).
+def filter_grid(x: Tensor) -> Tuple[Tensor, Tensor]:
+    r"""Returns the (quadrant-shifted) frequency grid for :math:`x`.
 
     Args:
-        x: An input tensor, \((*, H, W)\).
+        x: An input tensor, :math:`(*, H, W)`.
 
     Returns:
-        The radius and phase tensors, both \((H, W)\).
+        The radius and phase tensors, both :math:`(H, W)`.
 
     Example:
         >>> x = torch.rand(5, 5)
@@ -307,18 +306,19 @@ def filter_grid(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return r, phi
 
 
-def log_gabor(f: torch.Tensor, f_0: float, sigma_f: float) -> torch.Tensor:
-    r"""Returns the log-Gabor filter of \(f\).
+def log_gabor(f: Tensor, f_0: float, sigma_f: float) -> Tensor:
+    r"""Returns the log-Gabor filter of :math:`f`.
 
-    $$ G(f) = \exp \left( - \frac{\log(f / f_0)^2}{2 \sigma_f^2} \right) $$
+    .. math::
+        G(f) = \exp \left( - \frac{\log(f / f_0)^2}{2 \sigma_f^2} \right)
 
     Args:
-        f: A frequency tensor, \((*,)\).
-        f_0: The center frequency \(f_0\).
-        sigma_f: The bandwidth (log-)deviation \(\sigma_f\).
+        f: A frequency tensor, :math:`(*,)`.
+        f_0: The center frequency :math:`f_0`.
+        sigma_f: The bandwidth (log-)deviation :math:`\sigma_f`.
 
     Returns:
-        The filter tensor, \((*,)\).
+        The filter tensor, :math:`(*,)`.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/Log_Gabor_filter

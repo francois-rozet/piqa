@@ -2,13 +2,13 @@ r"""Learned Perceptual Image Patch Similarity (LPIPS)
 
 This module implements the LPIPS in PyTorch.
 
-Credits:
-    Inspired by [lpips-pytorch](https://github.com/S-aiueo32/lpips-pytorch)
+Original:
+    https://github.com/richzhang/PerceptualSimilarity
 
 References:
-    [1] The Unreasonable Effectiveness of Deep Features as a Perceptual Metric
-    (Zhang et al., 2018)
-    https://arxiv.org/abs/1801.03924
+    .. [Zhang2018] The Unreasonable Effectiveness of Deep Features as a Perceptual Metric (Zhang et al., 2018)
+
+    .. [Deng2009] ImageNet: A large-scale hierarchical image database (Deng et al, 2009)
 """
 
 import inspect
@@ -18,24 +18,21 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.hub as hub
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-
+from torch import Tensor
 from typing import Dict, List
 
+from .utils import _jit, assert_type, reduce_tensor
 
-_SHIFT = torch.tensor([0.485, 0.456, 0.406])
-_SCALE = torch.tensor([0.229, 0.224, 0.225])
 
-_WEIGHTS_URL = (
-    'https://github.com/richzhang/PerceptualSimilarity'
-    '/raw/master/lpips/weights/{}/{}.pth'
-)
+ORIGIN: str = 'https://github.com/richzhang/PerceptualSimilarity'
+SHIFT: Tensor = torch.tensor([0.485, 0.456, 0.406])
+SCALE: Tensor = torch.tensor([0.229, 0.224, 0.225])
 
 
 def get_weights(
     network: str = 'alex',
     version: str = 'v0.1',
-) -> Dict[str, torch.Tensor]:
+) -> Dict[str, Tensor]:
     r"""Returns the official LPIPS weights for `network`.
 
     Args:
@@ -52,7 +49,7 @@ def get_weights(
 
     # Load from URL
     weights = hub.load_state_dict_from_url(
-        _WEIGHTS_URL.format(version, network),
+        f'{ORIGIN}/raw/master/lpips/weights/{version}/{network}.pth',
         map_location='cpu',
     )
 
@@ -75,7 +72,6 @@ class Intermediary(nn.Module):
     """
 
     def __init__(self, layers: nn.Sequential, targets: List[int]):
-        r""""""
         super().__init__()
 
         self.layers = nn.ModuleList()
@@ -94,10 +90,7 @@ class Intermediary(nn.Module):
                 if j == len(targets):
                     break
 
-    def forward(self, input: torch.Tensor) -> List[torch.Tensor]:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor) -> List[Tensor]:
         output = []
 
         for layer in self.layers:
@@ -109,32 +102,32 @@ class Intermediary(nn.Module):
 
 class LPIPS(nn.Module):
     r"""Creates a criterion that measures the LPIPS
-    between an input \(x\) and a target \(y\).
+    between an input :math:`x` and a target :math:`y`.
 
-    $$ \text{LPIPS}(x, y) = \sum_{l \, \in \, \mathcal{F}}
-        w_l \cdot \text{MSE}(\hat{\phi}_l(x), \hat{\phi}_l(y)) $$
+    .. math::
+        \text{LPIPS}(x, y) = \sum_{l \, \in \, \mathcal{F}}
+            w_l \cdot \text{MSE}(\phi_l(x), \phi_l(y))
 
-    where \(\hat{\phi}_l\) represents the normalized output of an
-    intermediate layer \(l\) in a perception network \(\mathcal{F}\).
+    where :math:`\phi_l` represents the normalized output of an intermediate
+    layer :math:`l` in a perceptual network :math:`\mathcal{F}`.
+
+    Note:
+        :class:`LPIPS` is a trainable metric. For more details, refer to [Zhang2018]_.
 
     Args:
-        network: Specifies the perception network \(\mathcal{F}\) to use:
+        network: Specifies the perceptual network :math:`\mathcal{F}` to use:
             `'alex'` | `'squeeze'` | `'vgg'`.
-        scaling: Whether the input and target need to
-            be scaled w.r.t. ImageNet.
+        scaling: Whether the input and target need to be scaled w.r.t. [Deng2009]_.
         dropout: Whether dropout is used or not.
-        pretrained: Whether the official weights \(w_l\) are used or not.
+        pretrained: Whether the official weights :math:`w_l` are used or not.
         eval: Whether to initialize the object in evaluation mode or not.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
     Shapes:
-        * Input: \((N, 3, H, W)\)
-        * Target: \((N, 3, H, W)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
-
-    Note:
-        `LPIPS` is a *trainable* metric.
+        input: :math:`(N, 3, H, W)`
+        target: :math:`(N, 3, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = LPIPS().cuda()
@@ -155,13 +148,12 @@ class LPIPS(nn.Module):
         eval: bool = True,
         reduction: str = 'mean',
     ):
-        r""""""
         super().__init__()
 
         # ImageNet scaling
         self.scaling = scaling
-        self.register_buffer('shift', _SHIFT.view(1, -1, 1, 1))
-        self.register_buffer('scale', _SCALE.view(1, -1, 1, 1))
+        self.register_buffer('shift', SHIFT.view(1, -1, 1, 1))
+        self.register_buffer('scale', SCALE.view(1, -1, 1, 1))
 
         # Perception layers
         if network == 'alex':  # AlexNet
@@ -199,16 +191,9 @@ class LPIPS(nn.Module):
 
         self.reduction = reduction
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.shift.device,
             dim_range=(4, 4),
             n_channels=3,

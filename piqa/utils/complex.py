@@ -1,21 +1,22 @@
-r"""Differentiable and JITable complex tensor API
-"""
+r"""Differentiable and JITable complex tensor API"""
 
 import torch
 
+from torch import Tensor
 
-def complx(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
-    r"""Returns a complex tensor with its real part equal to \(\Re\) and
-    its imaginary part equal to \(\Im\).
 
-    $$ c = \Re + i \Im $$
+def complx(real: Tensor, imag: Tensor) -> Tensor:
+    r"""Returns a complex tensor with its real part equal to :math:`\Re` and
+    its imaginary part equal to :math:`\Im`.
+
+    .. math:: c = \Re + i \Im
 
     Args:
-        real: A tensor \(\Re\), \((*,)\).
-        imag: A tensor \(\Im\), \((*,)\).
+        real: A tensor :math:`\Re`, :math:`(*,)`.
+        imag: A tensor :math:`\Im`, :math:`(*,)`.
 
     Returns:
-        The complex tensor, \((*, 2)\).
+        The complex tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([2., 0.7071])
@@ -28,14 +29,14 @@ def complx(real: torch.Tensor, imag: torch.Tensor) -> torch.Tensor:
     return torch.stack([real, imag], dim=-1)
 
 
-def real(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the real part of \(x\).
+def real(x: Tensor) -> Tensor:
+    r"""Returns the real part of :math:`x`.
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The real tensor, \((*,)\).
+        The real tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -46,14 +47,14 @@ def real(x: torch.Tensor) -> torch.Tensor:
     return x[..., 0]
 
 
-def imag(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the imaginary part of \(x\).
+def imag(x: Tensor) -> Tensor:
+    r"""Returns the imaginary part of :math:`x`.
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The imaginary tensor, \((*,)\).
+        The imaginary tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -64,16 +65,16 @@ def imag(x: torch.Tensor) -> torch.Tensor:
     return x[..., 1]
 
 
-def conj(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the element-wise conjugate of \(x\).
+def conj(x: Tensor) -> Tensor:
+    r"""Returns the element-wise conjugate of :math:`x`.
 
-    $$ \bar{x} = \Re(x) - i \Im(x) $$
+    .. math:: \bar{x} = \Re(x) - i \Im(x)
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The conjugate tensor, \((*, 2)\).
+        The conjugate tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -85,16 +86,16 @@ def conj(x: torch.Tensor) -> torch.Tensor:
     return x * torch.tensor([1., -1.]).to(x)
 
 
-def turn(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the element-wise product of \(x\) with \(i\).
+def turn(x: Tensor) -> Tensor:
+    r"""Returns the element-wise product of :math:`x` with :math:`i`.
 
-    $$ i x = -\Im(x) + i \Re(x) $$
+    .. math:: i x = -\Im(x) + i \Re(x)
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The turned tensor, \((*, 2)\).
+        The turned tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -106,18 +107,18 @@ def turn(x: torch.Tensor) -> torch.Tensor:
     return complx(-imag(x), real(x))
 
 
-def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
-    r"""Returns a complex tensor with its modulus equal to \(r\)
-    and its phase equal to \(\phi\).
+def polar(r: Tensor, phi: Tensor) -> Tensor:
+    r"""Returns a complex tensor with its modulus equal to :math:`r`
+    and its phase equal to :math:`\phi`.
 
-    $$ c = r \exp(i \phi) $$
+    .. math:: c = r \exp(i \phi)
 
     Args:
-        r: A tensor \(r\), \((*,)\).
-        phi: A tensor \(\phi\), \((*,)\).
+        r: A tensor :math:`r`, :math:`(*,)`.
+        phi: A tensor :math:`\phi`, :math:`(*,)`.
 
     Returns:
-        The complex tensor, \((*, 2)\).
+        The complex tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([2., 1.])
@@ -130,17 +131,17 @@ def polar(r: torch.Tensor, phi: torch.Tensor) -> torch.Tensor:
     return complx(r * torch.cos(phi), r * torch.sin(phi))
 
 
-def mod(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
-    r"""Returns the modulus (absolute value) of \(x\).
+def mod(x: Tensor, squared: bool = False) -> Tensor:
+    r"""Returns the modulus (absolute value) of :math:`x`.
 
-    $$ \left| x \right| = \sqrt{ \Re(x)^2 + \Im(x)^2 } $$
+    .. math:: \left| x \right| = \sqrt{ \Re(x)^2 + \Im(x)^2 }
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
         squared: Whether the output is squared or not.
 
     Returns:
-        The modulus tensor, \((*,)\).
+        The modulus tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -156,16 +157,16 @@ def mod(x: torch.Tensor, squared: bool = False) -> torch.Tensor:
     return x
 
 
-def angle(x: torch.Tensor) -> torch.Tensor:
-    r"""Returns the angle (phase) of \(x\).
+def angle(x: Tensor) -> Tensor:
+    r"""Returns the angle (phase) of :math:`x`.
 
-    $$ \phi(x) = \operatorname{atan2}(\Im(x), \Re(x)) $$
+    .. math:: \phi(x) = \operatorname{atan2}(\Im(x), \Re(x))
 
     Args:
-        x: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The angle tensor, \((*,)\).
+        The angle tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])
@@ -173,21 +174,22 @@ def angle(x: torch.Tensor) -> torch.Tensor:
         tensor([0.0000, 0.7854])
     """
 
-    return torch.atan2(x[..., 1], x[..., 0])
+    return torch.atan2(imag(x), real(x))
 
 
-def prod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    r"""Returns the element-wise product of \(x\) and \(y\).
+def prod(x: Tensor, y: Tensor) -> Tensor:
+    r"""Returns the element-wise product of :math:`x` and :math:`y`.
 
-    $$ x y = \Re(x) \Re(y) - \Im(x) \Im(y)
-        + i \left( \Re(x) \Im(y) - \Im(x) \Re(y) \right) $$
+    .. math::
+        x y = \Re(x) \Re(y) - \Im(x) \Im(y)
+            + i \left( \Re(x) \Im(y) - \Im(x) \Re(y) \right)
 
     Args:
-        x: A complex tensor, \((*, 2)\).
-        y: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
+        y: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The product tensor, \((*, 2)\).
+        The product tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([[2.,  0.], [0.7071,  0.7071]])
@@ -197,23 +199,23 @@ def prod(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
                 [1.0000, 0.0000]])
     """
 
-    x_r, x_i = x[..., 0], x[..., 1]
-    y_r, y_i = y[..., 0], y[..., 1]
+    x_r, x_i = real(x), imag(x)
+    y_r, y_i = real(y), imag(y)
 
     return complx(x_r * y_r - x_i * y_i, x_i * y_r + x_r * y_i)
 
 
-def dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    r"""Returns the element-wise dot-product of \(x\) and \(y\).
+def dot(x: Tensor, y: Tensor) -> Tensor:
+    r"""Returns the element-wise dot-product of :math:`x` and :math:`y`.
 
-    $$ x \odot y = \Re(x) \Re(y) + \Im(x) \Im(y) $$
+    .. math:: x \odot y = \Re(x) \Re(y) + \Im(x) \Im(y)
 
     Args:
-        x: A complex tensor, \((*, 2)\).
-        y: A complex tensor, \((*, 2)\).
+        x: A complex tensor, :math:`(*, 2)`.
+        y: A complex tensor, :math:`(*, 2)`.
 
     Returns:
-        The dot-product tensor, \((*,)\).
+        The dot-product tensor, :math:`(*,)`.
 
     Example:
         >>> x = torch.tensor([[2.,  0.], [0.7071,  0.7071]])
@@ -225,17 +227,17 @@ def dot(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return (x * y).sum(dim=-1)
 
 
-def pow(x: torch.Tensor, exponent: float) -> torch.Tensor:
-    r"""Returns the power of \(x\) with `exponent`.
+def pow(x: Tensor, exponent: float) -> Tensor:
+    r"""Returns the power of :math:`x` with `exponent`.
 
-    $$ x^p = \left| x \right|^p \exp(i \phi(x))^p $$
+    .. math:: x^p = \left| x \right|^p \exp(i \phi(x))^p
 
     Args:
-        x: A complex tensor, \((*, 2)\).
-        exponent: The exponent \(p\).
+        x: A complex tensor, :math:`(*, 2)`.
+        exponent: The exponent :math:`p`.
 
     Returns:
-        The power tensor, \((*, 2)\).
+        The power tensor, :math:`(*, 2)`.
 
     Example:
         >>> x = torch.tensor([[2., 0.], [0.7071, 0.7071]])

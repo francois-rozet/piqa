@@ -9,21 +9,24 @@ Wikipedia:
 import torch
 import torch.nn as nn
 
-from piqa.utils import _jit, assert_type, reduce_tensor
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
 
 
 @_jit
-def mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    r"""Returns the Mean Squared Error (MSE) between \(x\) and \(y\).
+def mse(x: Tensor, y: Tensor) -> Tensor:
+    r"""Returns the Mean Squared Error (MSE) between :math:`x` and :math:`y`.
 
-    $$ \text{MSE}(x, y) = \frac{1}{\text{size}(x)} \sum_i (x_i - y_i)^2 $$
+    .. math::
+        \text{MSE}(x, y) = \frac{1}{\text{size}(x)} \sum_i (x_i - y_i)^2
 
     Args:
-        x: An input tensor, \((N, *)\).
-        y: A target tensor, \((N, *)\).
+        x: An input tensor, :math:`(N, *)`.
+        y: A target tensor, :math:`(N, *)`.
 
     Returns:
-        The MSE vector, \((N,)\).
+        The MSE vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -38,24 +41,24 @@ def mse(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
 @_jit
 def psnr(
-    x: torch.Tensor,
-    y: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
     epsilon: float = 1e-8,
     value_range: float = 1.,
-) -> torch.Tensor:
-    r"""Returns the PSNR between \(x\) and \(y\).
+) -> Tensor:
+    r"""Returns the PSNR between :math:`x` and :math:`y`.
 
-    $$ \text{PSNR}(x, y) =
-        10 \log_{10} \left( \frac{L^2}{\text{MSE}(x, y)} \right) $$
+    .. math::
+        \text{PSNR}(x, y) = 10 \log_{10} \left( \frac{L^2}{\text{MSE}(x, y)} \right)
 
     Args:
-        x: An input tensor, \((N, *)\).
-        y: A target tensor, \((N, *)\).
+        x: An input tensor, :math:`(N, *)`.
+        y: A target tensor, :math:`(N, *)`.
         epsilon: A numerical stability term.
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
     Returns:
-        The PSNR vector, \((N,)\).
+        The PSNR vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -76,12 +79,13 @@ class PSNR(nn.Module):
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `psnr`.
+    Note:
+        `**kwargs` are passed to :func:`psnr`.
 
     Shapes:
-        * Input: \((N, *)\)
-        * Target: \((N, *)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
+        input: :math:`(N, *)`
+        target: :math:`(N, *)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = PSNR()
@@ -94,24 +98,15 @@ class PSNR(nn.Module):
     """
 
     def __init__(self, reduction: str = 'mean', **kwargs):
-        r""""""
         super().__init__()
 
         self.reduction = reduction
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
-            device=input.device,
+            input, target,
             dim_range=(1, -1),
             value_range=(0., self.value_range),
         )

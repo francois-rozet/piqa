@@ -35,7 +35,7 @@ cp -R piqa/piqa <path/to/project>/piqa
 
 ## Documentation
 
-The [documentation](https://francois-rozet.github.io/piqa/) of this package is generated automatically using [`pdoc`](https://github.com/pdoc3/pdoc).
+The [documentation](https://francois-rozet.github.io/piqa/) of this package is generated automatically by [`Sphinx`](https://pypi.org/project/Sphinx/).
 
 ## Getting started
 

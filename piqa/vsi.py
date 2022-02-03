@@ -2,20 +2,16 @@ r"""Visual Saliency-based Index (VSI)
 
 This module implements the VSI in PyTorch.
 
+Original:
+    https://sse.tongji.edu.cn/linzhang/IQA/VSI/VSI.htm
+
 Wikipedia:
     https://en.wikipedia.org/wiki/Salience_(neuroscience)#Visual_saliency_modeling
 
-Credits:
-    Inspired by the [official implementation](https://sse.tongji.edu.cn/linzhang/IQA/VSI/VSI.htm)
-
 References:
-    [1] VSI: A Visual Saliency-Induced Index for Perceptual Image Quality Assessment
-    (Zhang et al., 2014)
-    https://ieeexplore.ieee.org/document/6873260
+    .. [Zhang2014] VSI: A Visual Saliency-Induced Index for Perceptual Image Quality Assessment (Zhang et al., 2014)
 
-    [2] SDSP: A novel saliency detection method by combining simple priors
-    (Zhang et al., 2013)
-    https://ieeexplore.ieee.org/document/6738036
+    .. [Zhang2013] SDSP: A novel saliency detection method by combining simple priors (Zhang et al., 2013)
 """
 
 import torch
@@ -23,9 +19,12 @@ import torch.fft as fft
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-from piqa.utils.color import ColorConv, rgb_to_xyz, xyz_to_lab
-from piqa.utils.functional import (
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
+from .utils import complex as cx
+from .utils.color import ColorConv, rgb_to_xyz, xyz_to_lab
+from .utils.functional import (
     scharr_kernel,
     gradient_kernel,
     filter_grid,
@@ -33,38 +32,37 @@ from piqa.utils.functional import (
     channel_conv,
 )
 
-import piqa.utils.complex as cx
-
 
 @_jit
 def vsi(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    vs_x: torch.Tensor,
-    vs_y: torch.Tensor,
-    kernel: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
+    vs_x: Tensor,
+    vs_y: Tensor,
+    kernel: Tensor,
     value_range: float = 1.,
     c1: float = 1.27,
     c2: float = 386. / (255. ** 2),
     c3: float = 130. / (255. ** 2),
     alpha: float = 0.4,
     beta: float = 0.02,
-) -> torch.Tensor:
-    r"""Returns the VSI between \(x\) and \(y\),
+) -> Tensor:
+    r"""Returns the VSI between :math:`x` and :math:`y`,
     without downsampling and color space conversion.
 
     Args:
-        x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
-        y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
-        vs_x: The input visual saliency, \((N, H, W)\).
-        vs_y: The target visual saliency, \((N, H, W)\).
-        kernel: A gradient kernel, \((2, 1, K, K)\).
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        x: An input tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
+        y: A target tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
+        vs_x: The input visual saliency, :math:`(N, H, W)`.
+        vs_y: The target visual saliency, :math:`(N, H, W)`.
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [1].
+    Note:
+        For the remaining arguments, refer to [Zhang2014]_.
 
     Returns:
-        The VSI vector, \((N,)\).
+        The VSI vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -115,19 +113,20 @@ def vsi(
 
 @_jit
 def sdsp_filter(
-    x: torch.Tensor,
+    x: Tensor,
     omega_0: float = 0.021,
     sigma_f: float = 1.34,
-) -> torch.Tensor:
-    r"""Returns the log-Gabor filter for `sdsp`.
+) -> Tensor:
+    r"""Returns the log-Gabor filter for :func:`sdsp`.
 
     Args:
-        x: An input tensor, \((*, H, W)\).
+        x: An input tensor, :math:`(*, H, W)`.
 
-        For the remaining arguments, refer to [2].
+    Note:
+        For the remaining arguments, refer to [Zhang2013]_.
 
     Returns:
-        The filter tensor, \((H, W)\).
+        The filter tensor, :math:`(H, W)`.
     """
 
     r, _ = filter_grid(x)
@@ -139,23 +138,24 @@ def sdsp_filter(
 
 @_jit
 def sdsp(
-    x: torch.Tensor,
-    filtr: torch.Tensor,
+    x: Tensor,
+    filtr: Tensor,
     value_range: float = 1.,
     sigma_c: float = 0.001,
     sigma_d: float = 145.,
-) -> torch.Tensor:
-    r"""Detects salient regions from \(x\).
+) -> Tensor:
+    r"""Detects salient regions from :math:`x`.
 
     Args:
-        x: An input tensor, \((N, 3, H, W)\).
-        filtr: The frequency domain filter, \((H, W)\).
-        value_range: The value range \(L\) of the input (usually 1. or 255).
+        x: An input tensor, :math:`(N, 3, H, W)`.
+        filtr: The frequency domain filter, :math:`(H, W)`.
+        value_range: The value range :math:`L` of the input (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [2].
+    Note:
+        For the remaining arguments, refer to [Zhang2013]_.
 
     Returns:
-        The visual saliency tensor, \((N, H, W)\).
+        The visual saliency tensor, :math:`(N, H, W)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -205,20 +205,26 @@ class VSI(nn.Module):
     r"""Creates a criterion that measures the VSI
     between an input and a target.
 
-    Before applying `vsi`, the input and target are converted from
-    RBG to L(MN) and downsampled by a factor \( \frac{\min(H, W)}{256} \).
+    Before applying :func:`vsi`, the input and target are converted from
+    RBG to L(MN) and downsampled by a factor :math:`\frac{\min(H, W)}{256}`.
 
-    The visual saliency maps of the input and target are determined by `sdsp`.
+    The visual saliency maps of the input and target are determined by :func:`sdsp`.
 
     Args:
         chromatic: Whether to use the chromatic channels (MN) or not.
         downsample: Whether downsampling is enabled or not.
-        kernel: A gradient kernel, \((2, 1, K, K)\).
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
             If `None`, use the Scharr kernel instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `vsi`.
+    Note:
+        `**kwargs` are passed to :func:`vsi`.
+
+    Shapes:
+        input: :math:`(N, 3, H, W)`
+        target: :math:`(N, 3, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = VSI().cuda()
@@ -234,11 +240,10 @@ class VSI(nn.Module):
         self,
         chromatic: bool = True,
         downsample: bool = True,
-        kernel: torch.Tensor = None,
+        kernel: Tensor = None,
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         if kernel is None:
@@ -253,16 +258,9 @@ class VSI(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.kernel.device,
             dim_range=(4, 4),
             n_channels=3,

@@ -1,18 +1,14 @@
-"""Feature Similarity (FSIM)
+r"""Feature Similarity (FSIM)
 
 This module implements the FSIM in PyTorch.
 
-Credits:
-    Inspired by the [official implementation](https://www4.comp.polyu.edu.hk/~cslzhang/IQA/FSIM/FSIM.htm)
+Original:
+    https://www4.comp.polyu.edu.hk/~cslzhang/IQA/FSIM/FSIM.htm
 
 References:
-    [1] FSIM: A Feature Similarity Index for Image Quality Assessment
-    (Zhang et al., 2011)
-    https://ieeexplore.ieee.org/document/5705575
+    .. [Zhang2011] FSIM: A Feature Similarity Index for Image Quality Assessment (Zhang et al., 2011)
 
-    [2] Image Features From Phase Congruency
-    (Kovesi, 1999)
-    https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.4.1641
+    .. [Kovesi1999] Image Features From Phase Congruency (Kovesi, 1999)
 """
 
 import math
@@ -21,9 +17,12 @@ import torch.fft as fft
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-from piqa.utils.color import ColorConv
-from piqa.utils.functional import (
+from torch import Tensor
+
+from .utils import _jit, assert_type, reduce_tensor
+from .utils import complex as cx
+from .utils.color import ColorConv
+from .utils.functional import (
     scharr_kernel,
     gradient_kernel,
     filter_grid,
@@ -31,38 +30,37 @@ from piqa.utils.functional import (
     channel_conv,
 )
 
-import piqa.utils.complex as cx
-
 
 @_jit
 def fsim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    pc_x: torch.Tensor,
-    pc_y: torch.Tensor,
-    kernel: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
+    pc_x: Tensor,
+    pc_y: Tensor,
+    kernel: Tensor,
     value_range: float = 1.,
     t1: float = 0.85,
     t2: float = 160. / (255. ** 2),
     t3: float = 200. / (255. ** 2),
     t4: float = 200. / (255. ** 2),
     lmbda: float = 0.03,
-) -> torch.Tensor:
-    r"""Returns the FSIM between \(x\) and \(y\),
+) -> Tensor:
+    r"""Returns the FSIM between :math:`x` and :math:`y`,
     without color space conversion and downsampling.
 
     Args:
-        x: An input tensor, \((N, 3 \text{ or } 1, H, W)\).
-        y: A target tensor, \((N, 3 \text{ or } 1, H, W)\).
-        pc_x: The input phase congruency, \((N, H, W)\).
-        pc_y: The target phase congruency, \((N, H, W)\).
-        kernel: A gradient kernel, \((2, 1, K, K)\).
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        x: An input tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
+        y: A target tensor, :math:`(N, 3 \text{ or } 1, H, W)`.
+        pc_x: The input phase congruency, :math:`(N, H, W)`.
+        pc_y: The target phase congruency, :math:`(N, H, W)`.
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [1].
+    Note:
+        For the remaining arguments, refer to [Zhang2011]_.
 
     Returns:
-        The FSIM vector, \((N,)\).
+        The FSIM vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -118,25 +116,26 @@ def fsim(
 
 @_jit
 def pc_filters(
-    x: torch.Tensor,
+    x: Tensor,
     scales: int = 4,
     orientations: int = 4,
     wavelength: float = 6.,
     factor: float = 2.,
     sigma_f: float = 0.5978,  # -log(0.55)
     sigma_theta: float = 0.6545,  # pi / (4 * 1.2)
-) -> torch.Tensor:
-    r"""Returns the log-Gabor filters for `phase_congruency`.
+) -> Tensor:
+    r"""Returns the log-Gabor filters for :func:`phase_congruency`.
 
     Args:
-        x: An input tensor, \((*, H, W)\).
-        scales: The number of scales, \(S_1\).
-        orientations: The number of orientations, \(S_2\).
+        x: An input tensor, :math:`(*, H, W)`.
+        scales: The number of scales, :math:`S_1`.
+        orientations: The number of orientations, :math:`S_2`.
 
-        For the remaining arguments, refer to [2].
+    Note:
+        For the remaining arguments, refer to [Kovesi1999]_.
 
     Returns:
-        The filters tensor, \((S_1, S_2, H, W)\).
+        The filters tensor, :math:`(S_1, S_2, H, W)`.
     """
 
     r, theta = filter_grid(x)
@@ -177,24 +176,25 @@ def pc_filters(
 
 @_jit
 def phase_congruency(
-    x: torch.Tensor,
-    filters: torch.Tensor,
+    x: Tensor,
+    filters: Tensor,
     value_range: float = 1.,
     k: float = 2.,
     rescale: float = 1.7,
     eps: float = 1e-8,
-) -> torch.Tensor:
-    r"""Returns the Phase Congruency (PC) of \(x\).
+) -> Tensor:
+    r"""Returns the Phase Congruency (PC) of :math:`x`.
 
     Args:
-        x: An input tensor, \((N, 1, H, W)\).
-        filters: The frequency domain filters, \((S_1, S_2, H, W)\).
-        value_range: The value range \(L\) of the input (usually 1. or 255).
+        x: An input tensor, :math:`(N, 1, H, W)`.
+        filters: The frequency domain filters, :math:`(S_1, S_2, H, W)`.
+        value_range: The value range :math:`L` of the input (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [2].
+    Note:
+        For the remaining arguments, refer to [Kovesi1999]_.
 
     Returns:
-        The PC tensor, \((N, H, W)\).
+        The PC tensor, :math:`(N, H, W)`.
 
     Example:
         >>> x = torch.rand(5, 1, 256, 256)
@@ -254,18 +254,24 @@ class FSIM(nn.Module):
     r"""Creates a criterion that measures the FSIM
     between an input and a target.
 
-    Before applying `fsim`, the input and target are converted from
-    RBG to Y(IQ) and downsampled by a factor \( \frac{\min(H, W)}{256} \).
+    Before applying :func:`fsim`, the input and target are converted from
+    RBG to Y(IQ) and downsampled by a factor :math:`\frac{\min(H, W)}{256}`.
 
     Args:
         chromatic: Whether to use the chromatic channels (IQ) or not.
         downsample: Whether downsampling is enabled or not.
-        kernel: A gradient kernel, \((2, 1, K, K)\).
+        kernel: A gradient kernel, :math:`(2, 1, K, K)`.
             If `None`, use the Scharr kernel instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `fsim`.
+    Note:
+        `**kwargs` are passed to :func:`fsim`.
+
+    Shapes:
+        input: :math:`(N, 3, H, W)`
+        target: :math:`(N, 3, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = FSIM().cuda()
@@ -281,11 +287,10 @@ class FSIM(nn.Module):
         self,
         chromatic: bool = True,
         downsample: bool = True,
-        kernel: torch.Tensor = None,
+        kernel: Tensor = None,
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         if kernel is None:
@@ -300,16 +305,9 @@ class FSIM(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.kernel.device,
             dim_range=(4, 4),
             n_channels=3,

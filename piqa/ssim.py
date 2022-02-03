@@ -2,83 +2,80 @@ r"""Structural Similarity (SSIM) and Multi-Scale Structural Similarity (MS-SSIM)
 
 This module implements the SSIM and MS-SSIM in PyTorch.
 
+Original:
+    https://ece.uwaterloo.ca/~z70wang/research/ssim/
+
 Wikipedia:
     https://en.wikipedia.org/wiki/Structural_similarity
 
-Credits:
-    Inspired by [pytorch-msssim](https://github.com/VainF/pytorch-msssim)
-
 References:
-    [1] Image quality assessment: From error visibility to structural similarity
-    (Wang et al., 2004)
-    https://ieeexplore.ieee.org/document/1284395/
+    .. [Wang2004a] Image quality assessment: From error visibility to structural similarity (Wang et al., 2004)
 
-    [2] Multiscale structural similarity for image quality assessment
-    (Wang et al., 2004)
-    https://ieeexplore.ieee.org/document/1292216/
+    .. [Wang2004b] Multiscale structural similarity for image quality assessment (Wang et al., 2004)
 """
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from piqa.utils import _jit, assert_type, reduce_tensor
-from piqa.utils.functional import (
+from torch import Tensor
+from typing import Tuple
+
+from .utils import _jit, assert_type, reduce_tensor
+from .utils.functional import (
     gaussian_kernel,
     kernel_views,
     channel_convs,
 )
 
-from typing import Tuple
-
 
 @_jit
 def ssim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    kernel: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
+    kernel: Tensor,
     channel_avg: bool = True,
     padding: bool = False,
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[Tensor, Tensor]:
     r"""Returns the SSIM and Contrast Sensitivity (CS) between
-    \(x\) and \(y\).
+    :math:`x` and :math:`y`.
 
-    $$ \text{SSIM}(x, y) =
-        \frac{2 \mu_x \mu_y + C_1}{\mu^2_x + \mu^2_y + C_1} \text{CS}(x, y) $$
+    .. math::
+        \text{SSIM}(x, y) &=
+            \frac{2 \mu_x \mu_y + C_1}{\mu^2_x + \mu^2_y + C_1} \text{CS}(x, y) \\
+        \text{CS}(x, y) &=
+            \frac{2 \sigma_{xy} + C_2}{\sigma^2_x + \sigma^2_y + C_2}
 
-    $$ \text{CS}(x, y) =
-        \frac{2 \sigma_{xy} + C_2}{\sigma^2_x + \sigma^2_y + C_2} $$
-
-    where \(\mu_x\), \(\mu_y\), \(\sigma^2_x\), \(\sigma^2_y\) and
-    \(\sigma_{xy}\) are the results of a smoothing convolution over
-    \(x\), \(y\), \((x - \mu_x)^2\), \((y - \mu_y)^2\) and
-    \((x - \mu_x)(y - \mu_y)\), respectively.
+    where :math:`\mu_x`, :math:`\mu_y`, :math:`\sigma^2_x`, :math:`\sigma^2_y` and
+    :math:`\sigma_{xy}` are the results of a smoothing convolution over
+    :math:`x`, :math:`y`, :math:`(x - \mu_x)^2`, :math:`(y - \mu_y)^2` and
+    :math:`(x - \mu_x)(y - \mu_y)`, respectively.
 
     In practice, SSIM and CS are averaged over the spatial dimensions.
     If `channel_avg` is `True`, they are also averaged over the channels.
 
     Note:
-        The number of spatial dimensions is not limited to 2. You can apply
-        `ssim` (and `SSIM`) on images with 3, or even more, dimensions.
+        The number of spatial dimensions is not limited to 2. You can also apply
+        :func:`ssim` (and :class:`SSIM`) on images with 3, or even more, dimensions.
 
     Args:
-        x: An input tensor, \((N, C, H, *)\).
-        y: A target tensor, \((N, C, H, *)\).
-        kernel: A smoothing kernel, \((C, 1, K)\).
-            E.g. `piqa.utils.functional.gaussian_kernel`.
+        x: An input tensor, :math:`(N, C, H, *)`.
+        y: A target tensor, :math:`(N, C, H, *)`.
+        kernel: A smoothing kernel, :math:`(C, 1, K)`.
         channel_avg: Whether to average over the channels or not.
-        padding: Whether to pad with \(\frac{K}{2}\) zeros the spatial
+        padding: Whether to pad with :math:`\frac{K}{2}` zeros the spatial
             dimensions or not.
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [1].
+    Note:
+        For the remaining arguments, refer to [Wang2004a]_.
 
     Returns:
-        The SSIM and CS tensors, both \((N, C)\) or \((N,)\)
-        depending on `channel_avg`
+        The SSIM and CS tensors, both :math:`(N, C)` or :math:`(N,)`
+        depending on `channel_avg`.
 
     Example:
         >>> x = torch.rand(5, 3, 64, 64, 64)
@@ -129,38 +126,38 @@ def ssim(
 
 @_jit
 def ms_ssim(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    kernel: torch.Tensor,
-    weights: torch.Tensor,
+    x: Tensor,
+    y: Tensor,
+    kernel: Tensor,
+    weights: Tensor,
     padding: bool = False,
     value_range: float = 1.,
     k1: float = 0.01,
     k2: float = 0.03,
-) -> torch.Tensor:
-    r"""Returns the MS-SSIM between \(x\) and \(y\).
+) -> Tensor:
+    r"""Returns the MS-SSIM between :math:`x` and :math:`y`.
 
-    $$ \text{MS-SSIM}(x, y) =
-        \text{SSIM}(x^M, y^M)^{\gamma_M} \prod^{M - 1}_{i = 1}
-        \text{CS}(x^i, y^i)^{\gamma_i} $$
+    .. math::
+        \text{MS-SSIM}(x, y) = \text{SSIM}(x^M, y^M)^{\gamma_M}
+            \prod^{M - 1}_{i = 1} \text{CS}(x^i, y^i)^{\gamma_i}
 
-    where \(x^i\) and \(y^i\) are obtained by downsampling
-    the original tensors by a factor \(2^{i - 1}\).
+    where :math:`x^i` and :math:`y^i` are obtained by downsampling
+    the initial tensors by a factor :math:`2^{i - 1}`.
 
     Args:
-        x: An input tensor, \((N, C, H, W)\).
-        y: A target tensor, \((N, C, H, W)\).
-        kernel: A smoothing kernel, \((C, 1, K)\).
-            E.g. `piqa.utils.functional.gaussian_kernel`.
-        weights: The weights \(\gamma_i\) of the scales, \((M,)\).
-        padding: Whether to pad with \(\frac{K}{2}\) zeros the spatial
+        x: An input tensor, :math:`(N, C, H, W)`.
+        y: A target tensor, :math:`(N, C, H, W)`.
+        kernel: A smoothing kernel, :math:`(C, 1, K)`.
+        weights: The weights :math:`\gamma_i` of the scales, :math:`(M,)`.
+        padding: Whether to pad with :math:`\frac{K}{2}` zeros the spatial
             dimensions or not.
-        value_range: The value range \(L\) of the inputs (usually 1. or 255).
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
 
-        For the remaining arguments, refer to [2].
+    Note:
+        For the remaining arguments, refer to [Wang2004b]_.
 
     Returns:
-        The MS-SSIM vector, \((N,)\).
+        The MS-SSIM vector, :math:`(N,)`.
 
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
@@ -203,16 +200,17 @@ class SSIM(nn.Module):
     Args:
         window_size: The size of the window.
         sigma: The standard deviation of the window.
-        n_channels: The number of channels \(C\).
+        n_channels: The number of channels :math:`C`.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `ssim`.
+    Note:
+        `**kwargs` are passed to :func:`ssim`.
 
     Shapes:
-        * Input: \((N, C, H, *)\)
-        * Target: \((N, C, H, *)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
+        input: :math:`(N, C, H, *)`
+        target: :math:`(N, C, H, *)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = SSIM().cuda()
@@ -232,7 +230,6 @@ class SSIM(nn.Module):
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         kernel = gaussian_kernel(window_size, sigma)
@@ -243,16 +240,9 @@ class SSIM(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.kernel.device,
             dim_range=(3, -1),
             n_channels=self.kernel.size(0),
@@ -271,18 +261,19 @@ class MS_SSIM(nn.Module):
     Args:
         window_size: The size of the window.
         sigma: The standard deviation of the window.
-        n_channels: The number of channels \(C\).
-        weights: The weights of the scales, \((M,)\).
-            If `None`, use the `MS_SSIM.OFFICIAL_WEIGHTS` instead.
+        n_channels: The number of channels :math:`C`.
+        weights: The weights of the scales, :math:`(M,)`.
+            If `None`, use :const:`MS_SSIM.WEIGHTS` instead.
         reduction: Specifies the reduction to apply to the output:
             `'none'` | `'mean'` | `'sum'`.
 
-        `**kwargs` are transmitted to `ms_ssim`.
+    Note:
+        `**kwargs` are passed to :func:`ms_ssim`.
 
     Shapes:
-        * Input: \((N, C, H, W)\)
-        * Target: \((N, C, H, W)\)
-        * Output: \((N,)\) or \(()\) depending on `reduction`
+        input: :math:`(N, C, H, W)`
+        target: :math:`(N, C, H, W)`
+        output: :math:`(N,)` or :math:`()` depending on `reduction`
 
     Example:
         >>> criterion = MS_SSIM().cuda()
@@ -294,20 +285,18 @@ class MS_SSIM(nn.Module):
         >>> l.backward()
     """
 
-    OFFICIAL_WEIGHTS: torch.Tensor = torch.tensor(
-        [0.0448, 0.2856, 0.3001, 0.2363, 0.1333]
-    )
+    WEIGHTS: Tensor = torch.tensor([0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
+    r"""Scale weights of [Wang2004b]_."""
 
     def __init__(
         self,
         window_size: int = 11,
         sigma: float = 1.5,
         n_channels: int = 3,
-        weights: torch.Tensor = None,
+        weights: Tensor = None,
         reduction: str = 'mean',
         **kwargs,
     ):
-        r""""""
         super().__init__()
 
         kernel = gaussian_kernel(window_size, sigma)
@@ -315,7 +304,7 @@ class MS_SSIM(nn.Module):
         self.register_buffer('kernel', kernel.repeat(n_channels, 1, 1))
 
         if weights is None:
-            weights = self.OFFICIAL_WEIGHTS
+            weights = self.WEIGHTS
 
         self.register_buffer('weights', weights)
 
@@ -323,16 +312,9 @@ class MS_SSIM(nn.Module):
         self.value_range = kwargs.get('value_range', 1.)
         self.kwargs = kwargs
 
-    def forward(
-        self,
-        input: torch.Tensor,
-        target: torch.Tensor,
-    ) -> torch.Tensor:
-        r"""Defines the computation performed at every call.
-        """
-
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         assert_type(
-            [input, target],
+            input, target,
             device=self.kernel.device,
             dim_range=(4, 4),
             n_channels=self.kernel.size(0),
@@ -340,8 +322,7 @@ class MS_SSIM(nn.Module):
         )
 
         l = ms_ssim(
-            input,
-            target,
+            input, target,
             kernel=self.kernel,
             weights=self.weights,
             **self.kwargs,
