@@ -22,6 +22,7 @@ from torch import Tensor
 from typing import Dict, List
 
 from .utils import _jit, assert_type, reduce_tensor
+from .utils.functional import l2_norm
 
 
 ORIGIN: str = 'https://github.com/richzhang/PerceptualSimilarity'
@@ -209,8 +210,8 @@ class LPIPS(nn.Module):
         residuals = []
 
         for lin, fx, fy in zip(self.lins, self.net(input), self.net(target)):
-            fx = fx / torch.linalg.norm(fx, dim=1, keepdim=True)
-            fy = fy / torch.linalg.norm(fy, dim=1, keepdim=True)
+            fx = fx / l2_norm(fx, dims=[1], keepdim=True)
+            fy = fy / l2_norm(fy, dims=[1], keepdim=True)
 
             mse = ((fx - fy) ** 2).mean(dim=(-1, -2), keepdim=True)
             residuals.append(lin(mse).flatten())

@@ -24,6 +24,7 @@ from .utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
+    l2_norm,
 )
 
 
@@ -75,8 +76,8 @@ def gmsd(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = torch.linalg.norm(channel_conv(x, kernel, padding=pad), dim=1)
-    gm_y = torch.linalg.norm(channel_conv(y, kernel, padding=pad), dim=1)
+    gm_x = l2_norm(channel_conv(x, kernel, padding=pad), dims=[1])
+    gm_y = l2_norm(channel_conv(y, kernel, padding=pad), dims=[1])
 
     gm_xy = gm_x * gm_y
 
@@ -109,7 +110,8 @@ def ms_gmsd(
     without color space conversion.
 
     .. math::
-        \text{MS-GMSD}(x, y) = \sum^{M}_{i = 1} w_i \text{GMSD}(x^i, y^i)
+        \text{MS-GMSD}(x, y) =
+            \sqrt{\sum^{M}_{i = 1} w_i \text{GMSD}(x^i, y^i) ** 2}
 
     where :math:`x^i` and :math:`y^i` are obtained by downsampling
     the initial tensors by a factor :math:`2^{i - 1}`.
@@ -150,8 +152,8 @@ def ms_gmsd(
             c=c, alpha=alpha,
         ))
 
-    msgmsd = torch.stack(gmsds, dim=-1) ** 2
-    msgmsd = torch.sqrt((msgmsd * weights).sum(dim=-1))
+    msgmsd = weights * torch.stack(gmsds, dim=-1) ** 2
+    msgmsd = msgmsd.sum(dim=-1).sqrt()
 
     return msgmsd
 

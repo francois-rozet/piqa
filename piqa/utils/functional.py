@@ -335,3 +335,38 @@ def log_gabor(f: Tensor, f_0: float, sigma_f: float) -> Tensor:
     """
 
     return torch.exp(- (f / f_0).log() ** 2 / (2 * sigma_f ** 2))
+
+
+def l2_norm(
+    x: torch.Tensor,
+    dims: List[int],
+    keepdim: bool = False,
+) -> torch.Tensor:
+    r"""Returns the :math:`L_2` norm of :math:`x`.
+
+    .. math:
+        L_2(x) = \left\| x \right\|_2 = \sqrt{\sum_i x^2_i}
+
+    Args:
+        x: A tensor, :math:`(*,)`.
+        dims: The dimensions along which to calculate the norm.
+        keepdim: Whether the output tensor has `dims` retained or not.
+
+    Wikipedia:
+        https://en.wikipedia.org/wiki/Norm_(mathematics)
+
+    Example:
+        >>> x = torch.arange(9).float().view(3, 3)
+        >>> x
+        tensor([[0., 1., 2.],
+                [3., 4., 5.],
+                [6., 7., 8.]])
+        >>> l2_norm(x, dims=[0])
+        tensor([6.7082, 8.1240, 9.6437])
+    """
+
+    x = x ** 2
+    x = x.sum(dim=dims, keepdim=keepdim)
+    x = x.sqrt()
+
+    return x

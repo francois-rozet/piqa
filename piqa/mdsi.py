@@ -22,6 +22,7 @@ from .utils.functional import (
     prewitt_kernel,
     gradient_kernel,
     channel_conv,
+    l2_norm,
 )
 
 
@@ -78,12 +79,9 @@ def mdsi(
     # Gradient magnitude
     pad = kernel.size(-1) // 2
 
-    gm_x = torch.linalg.norm(channel_conv(l_x, kernel, padding=pad), dim=1)
-    gm_y = torch.linalg.norm(channel_conv(l_y, kernel, padding=pad), dim=1)
-    gm_avg = torch.linalg.norm(
-        channel_conv((l_x + l_y) / 2., kernel, padding=pad),
-        dim=1,
-    )
+    gm_x = l2_norm(channel_conv(l_x, kernel, padding=pad), dims=[1])
+    gm_y = l2_norm(channel_conv(l_y, kernel, padding=pad), dims=[1])
+    gm_avg = l2_norm(channel_conv(l_x + l_y, kernel, padding=pad), dims=[1]) / 2
 
     gm_x_sq, gm_y_sq, gm_avg_sq = gm_x ** 2, gm_y ** 2, gm_avg ** 2
 

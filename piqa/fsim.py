@@ -28,6 +28,7 @@ from .utils.functional import (
     filter_grid,
     log_gabor,
     channel_conv,
+    l2_norm,
 )
 
 
@@ -87,8 +88,8 @@ def fsim(
     # Gradient magnitude similarity
     pad = kernel.size(-1) // 2
 
-    g_x = torch.linalg.norm(channel_conv(y_x, kernel, padding=pad), dim=1)
-    g_y = torch.linalg.norm(channel_conv(y_y, kernel, padding=pad), dim=1)
+    g_x = l2_norm(channel_conv(y_x, kernel, padding=pad), dims=[1])
+    g_y = l2_norm(channel_conv(y_y, kernel, padding=pad), dims=[1])
 
     s_g = (2 * g_x * g_y + t2) / (g_x ** 2 + g_y ** 2 + t2)
 

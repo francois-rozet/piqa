@@ -30,6 +30,7 @@ from .utils.functional import (
     filter_grid,
     log_gabor,
     channel_conv,
+    l2_norm,
 )
 
 
@@ -87,8 +88,8 @@ def vsi(
     # Gradient magnitude similarity
     pad = kernel.size(-1) // 2
 
-    g_x = torch.linalg.norm(channel_conv(l_x, kernel, padding=pad), dim=1)
-    g_y = torch.linalg.norm(channel_conv(l_y, kernel, padding=pad), dim=1)
+    g_x = l2_norm(channel_conv(l_x, kernel, padding=pad), dims=[1])
+    g_y = l2_norm(channel_conv(l_y, kernel, padding=pad), dims=[1])
 
     s_g = (2 * g_x * g_y + c2) / (g_x ** 2 + g_y ** 2 + c2)
 
@@ -171,7 +172,7 @@ def sdsp(
     x_f = fft.ifft2(fft.fft2(x_lab) * filtr)
     x_f = cx.real(torch.view_as_real(x_f))
 
-    s_f = torch.linalg.norm(x_f, dim=1)
+    s_f = l2_norm(x_f, dims=[1])
 
     # Color prior
     x_ab = x_lab[:, 1:]
