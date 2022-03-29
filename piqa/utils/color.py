@@ -29,7 +29,7 @@ def color_conv(
         weight: A weight kernel, :math:`(C', C)`.
     """
 
-    return F.conv1d(x, weight.view(weight.shape + (1,) * spatial(x)))
+    return F.linear(x.transpose(1, -1), weight).transpose(1, -1)
 
 
 RGB_TO_YIQ = torch.tensor([

@@ -36,7 +36,18 @@ def channel_conv(
                   [144., 153., 162.]]]])
     """
 
-    return F.conv1d(x, kernel, padding=padding, groups=x.size(1))
+    D = len(kernel.shape) - 2
+
+    assert D <= 3, "PyTorch only supports 1D, 2D or 3D convolutions."
+
+    if D == 3:
+        return F.conv3d(x, kernel, padding=padding, groups=x.size(-4))
+    elif D == 2:
+        return F.conv2d(x, kernel, padding=padding, groups=x.size(-3))
+    elif D == 1:
+        return F.conv1d(x, kernel, padding=padding, groups=x.size(-2))
+    else:
+        return F.linear(x, kernel.expand(x.size(-1)))
 
 
 def channel_convs(

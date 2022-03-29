@@ -244,7 +244,7 @@ class SSIM(nn.Module):
         assert_type(
             input, target,
             device=self.kernel.device,
-            dim_range=(3, -1),
+            dim_range=(3, 5),
             n_channels=self.kernel.size(0),
             value_range=(0., self.value_range),
         )
