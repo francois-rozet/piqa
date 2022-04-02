@@ -111,7 +111,7 @@ def ms_gmsd(
 
     .. math::
         \text{MS-GMSD}(x, y) =
-            \sqrt{\sum^{M}_{i = 1} w_i \text{GMSD}(x^i, y^i) ** 2}
+            \sqrt{\sum^{M}_{i = 1} w_i \text{GMSD}(x^i, y^i)^2}
 
     where :math:`x^i` and :math:`y^i` are obtained by downsampling
     the initial tensors by a factor :math:`2^{i - 1}`.

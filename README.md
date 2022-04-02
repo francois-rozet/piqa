@@ -33,10 +33,6 @@ git clone https://github.com/francois-rozet/piqa
 cp -R piqa/piqa <path/to/project>/piqa
 ```
 
-## Documentation
-
-The [documentation](https://francois-rozet.github.io/piqa/) of this package is generated automatically by [`Sphinx`](https://pypi.org/project/Sphinx/).
-
 ## Getting started
 
 In `piqa`, each metric is associated to a class, child of `torch.nn.Module`, which has to be instantiated to evaluate the metric.
@@ -79,6 +75,8 @@ kernel = gaussian_kernel(11, sigma=1.5).repeat(3, 1, 1)
 
 l = ssim(x, y, kernel=kernel, channel_avg=False)
 ```
+
+For more information about PIQA's features, check out the documentation at [francois-rozet.github.io/piqa/](https://francois-rozet.github.io/piqa/).
 
 ### Metrics
 

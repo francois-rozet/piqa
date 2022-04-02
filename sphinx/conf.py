@@ -4,6 +4,7 @@ import os
 import sys
 import inspect
 import importlib
+
 sys.path.insert(0, os.path.abspath('..'))
 
 ## Project
@@ -28,46 +29,57 @@ autodoc_typehints_description_target = 'documented'
 autodoc_typehints_format = 'short'
 autosummary_generate = True
 
-def linkcode_resolve(domain: str, info: dict) -> str:
+def linkcode_resolve(domain: str, info: dict, package: str = 'piqa') -> str:
     module = info.get('module', '')
     fullname = info.get('fullname', '')
 
     if not module or not fullname:
         return None
 
-    path = module.replace('.', '/') + '.py'
-    module = importlib.import_module(module)
-
-    objct = module
+    objct = importlib.import_module(module)
     for name in fullname.split('.'):
         objct = getattr(objct, name)
 
     try:
+        file = inspect.getsourcefile(objct)
+        file = file[file.rindex(package):]
+
         lines, start = inspect.getsourcelines(objct)
         end = start + len(lines) - 1
     except Exception as e:
         return None
     else:
-        return f'{repository}/tree/docs/{path}#L{start}-L{end}'
+        return f'{repository}/tree/docs/{file}#L{start}-L{end}'
 
-napoleon_custom_sections = [('Shapes', 'params_style')]
-napoleon_custom_sections.extend([
+napoleon_custom_sections = [
     'Original',
     'Wikipedia',
-])
+    ('Shapes', 'params_style'),
+]
 
 ## HTML
 
 default_role = 'python'
 exclude_patterns = ['templates']
 html_copy_source = False
-html_css_files = ['custom.css', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css']
+html_css_files = [
+    'custom.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+]
 html_favicon = 'static/logo_dark.svg'
 html_show_sourcelink = False
 html_sourcelink_suffix = ''
 html_static_path = ['static']
 html_theme = 'furo'
 html_theme_options = {
+    'footer_icons': [
+        {
+            'name': 'GitHub',
+            'url': 'https://github.com/francois-rozet/piqa',
+            'html': '<i class="fa-brands fa-github fa-lg"></i>',
+            'class': '',
+        },
+    ],
     'light_css_variables': {
         'color-api-keyword': '#006699',
         'color-api-name': '#00aa88',

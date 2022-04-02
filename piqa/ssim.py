@@ -57,9 +57,9 @@ def ssim(
     In practice, SSIM and CS are averaged over the spatial dimensions.
     If `channel_avg` is `True`, they are also averaged over the channels.
 
-    Note:
-        The number of spatial dimensions is not limited to 2. You can also apply
-        :func:`ssim` (and :class:`SSIM`) on images with 3, or even more, dimensions.
+    Tip:
+        :func:`ssim` and :class:`SSIM` can be applied to images with 1, 2 or even
+        3 spatial dimensions.
 
     Args:
         x: An input tensor, :math:`(N, C, H, *)`.
