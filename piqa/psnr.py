@@ -36,7 +36,7 @@ def mse(x: Tensor, y: Tensor) -> Tensor:
         torch.Size([5])
     """
 
-    return ((x - y) ** 2).view(x.size(0), -1).mean(dim=-1)
+    return ((x - y) ** 2).reshape(x.size(0), -1).mean(dim=-1)
 
 
 @_jit
