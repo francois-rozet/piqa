@@ -22,7 +22,7 @@ def channel_conv(
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
-        >>> x = torch.arange(25, dtype=torch.float).view(1, 1, 5, 5)
+        >>> x = torch.arange(25).float().reshape(1, 1, 5, 5)
         >>> x
         tensor([[[[ 0.,  1.,  2.,  3.,  4.],
                   [ 5.,  6.,  7.,  8.,  9.],
@@ -64,7 +64,7 @@ def channel_convs(
         padding: The implicit paddings on both sides of the input dimensions.
 
     Example:
-        >>> x = torch.arange(25, dtype=torch.float).view(1, 1, 5, 5)
+        >>> x = torch.arange(25).float().reshape(1, 1, 5, 5)
         >>> x
         tensor([[[[ 0.,  1.,  2.,  3.,  4.],
                   [ 5.,  6.,  7.,  8.,  9.],
@@ -165,7 +165,7 @@ def kernel_views(kernel: Tensor, n: int = 2) -> List[Tensor]:
 
     for i in range(2, n + 2):
         shape[i] = k
-        views.append(kernel.view(shape))
+        views.append(kernel.reshape(shape))
         shape[i] = 1
 
     return views
@@ -367,7 +367,7 @@ def l2_norm(
         https://en.wikipedia.org/wiki/Norm_(mathematics)
 
     Example:
-        >>> x = torch.arange(9).float().view(3, 3)
+        >>> x = torch.arange(9).float().reshape(3, 3)
         >>> x
         tensor([[0., 1., 2.],
                 [3., 4., 5.],

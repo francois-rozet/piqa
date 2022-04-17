@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch import Tensor
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 def spatial(x: Tensor) -> int:
@@ -21,15 +21,17 @@ def spatial(x: Tensor) -> int:
 def color_conv(
     x: Tensor,
     weight: Tensor,
+    bias: Optional[Tensor] = None,
 ) -> Tensor:
     r"""Returns the color convolution of :math:`x` with the kernel `weight`.
 
     Args:
         x: A tensor, :math:`(N, C, *)`.
         weight: A weight kernel, :math:`(C', C)`.
+        bias: A bias vector, :math:`(C',)`.
     """
 
-    return F.linear(x.transpose(1, -1), weight).transpose(1, -1)
+    return F.linear(x.transpose(1, -1), weight, bias).transpose(1, -1)
 
 
 RGB_TO_YIQ = torch.tensor([
@@ -93,17 +95,19 @@ class ColorConv(nn.Module):
 def rgb_to_xyz(x: Tensor, value_range: float = 1.) -> Tensor:
     r"""Converts from sRGB to (CIE) XYZ.
 
+    Args:
+        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
+
     Wikipedia:
         https://en.wikipedia.org/wiki/SRGB
     """
 
     x = x / value_range
-
-    mask = x <= 0.04045
-    left = x / 12.92
-    right = ((x + 0.055) / 1.055) ** 2.4
-
-    x = torch.where(mask, left, right)
+    x = torch.where(
+        x <= 0.04045,
+        x / 12.92,
+        ((x + 0.055) / 1.055) ** 2.4,
+    )
 
     weight = torch.tensor([
         [0.4124564, 0.3575761, 0.1804375],
@@ -114,26 +118,22 @@ def rgb_to_xyz(x: Tensor, value_range: float = 1.) -> Tensor:
     return color_conv(x, weight.to(x))
 
 
-def xyz_to_lab(
-    x: Tensor,
-    illuminants: Tuple[float, float, float] = (0.956797052643698, 1., 0.9214805860173273),
-) -> Tensor:
+def xyz_to_lab(x: Tensor) -> Tensor:
     r"""Converts from (CIE) XYZ to (CIE) LAB.
 
     Wikipedia:
         https://en.wikipedia.org/wiki/CIELAB_color_space
     """
 
-    scale = torch.tensor(illuminants).view((3,) + (1,) * spatial(x))
-    x = x / scale.to(x)
-
+    illuminants = torch.tensor([0.964212, 1., 0.825188])  # D50
     delta = 6 / 29
 
-    mask = x > delta ** 3
-    left = x ** (1 / 3)
-    right = x / (3 * delta ** 2) + 4 / 29
-
-    x = torch.where(mask, left, right)
+    x = color_conv(x, torch.diag(illuminants).to(x))
+    x = torch.where(
+        x > delta ** 3,
+        x ** (1 / 3),
+        x / (3 * delta ** 2) + 4 / 29,
+    )
 
     weight = torch.tensor([
         [0., 116., 0.],
@@ -141,6 +141,6 @@ def xyz_to_lab(
         [0., 200., -200.],
     ])
 
-    bias = torch.tensor([-16., 0., 0.]).view(scale.shape)
+    bias = torch.tensor([-16., 0., 0.])
 
-    return color_conv(x, weight.to(x)) + bias.to(x)
+    return color_conv(x, weight.to(x), bias.to(x))

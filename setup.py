@@ -10,7 +10,7 @@ with open('requirements.txt', 'r') as f:
 
 setuptools.setup(
     name='piqa',
-    version='1.2.2',
+    version='1.2.3',
     packages=setuptools.find_packages(),
     description='PyTorch Image Quality Assessment',
     keywords='image quality processing metrics torch vision',

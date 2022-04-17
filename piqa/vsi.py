@@ -3,7 +3,7 @@ r"""Visual Saliency-based Index (VSI)
 This module implements the VSI in PyTorch.
 
 Original:
-    https://sse.tongji.edu.cn/linzhang/IQA/VSI/VSI.htm
+    https://www.putianjian.net/linzhang/IQA/VSI/VSI.html
 
 Wikipedia:
     https://en.wikipedia.org/wiki/Salience_(neuroscience)#Visual_saliency_modeling
@@ -180,8 +180,8 @@ def sdsp(
     lo, _ = x_ab.flatten(-2).min(dim=-1)
     up, _ = x_ab.flatten(-2).max(dim=-1)
 
-    lo = lo.view(lo.shape + (1, 1))
-    up = up.view(lo.shape)
+    lo = lo.reshape(lo.shape + (1, 1))
+    up = up.reshape(lo.shape)
     span = torch.where(up > lo, up - lo, torch.tensor(1.).to(lo))
 
     x_ab = (x_ab - lo) / span

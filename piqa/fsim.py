@@ -159,7 +159,7 @@ def pc_filters(
     sin_theta = torch.sin(theta)
 
     theta_j = math.pi * torch.arange(orientations).to(x) / orientations
-    theta_j = theta_j.view(orientations, 1, 1)
+    theta_j = theta_j.reshape(orientations, 1, 1)
 
     ## Measure (theta - theta_j) in the sine/cosine domains
     ## to prevent wrap-around errors

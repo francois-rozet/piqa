@@ -153,8 +153,8 @@ class LPIPS(nn.Module):
 
         # ImageNet scaling
         self.scaling = scaling
-        self.register_buffer('shift', SHIFT.view(1, -1, 1, 1))
-        self.register_buffer('scale', SCALE.view(1, -1, 1, 1))
+        self.register_buffer('shift', SHIFT.reshape(1, -1, 1, 1))
+        self.register_buffer('scale', SCALE.reshape(1, -1, 1, 1))
 
         # Perception layers
         if network == 'alex':  # AlexNet
