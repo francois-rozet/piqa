@@ -1,9 +1,7 @@
 ---
 name: "🐛 Bug report"
 about: "Report a bug to help PIQA improve"
-title: "[BUG] <issue> with <module.component>"
 labels: bug
-assignees: ''
 
 ---
 
@@ -16,9 +14,9 @@ A clear description of what the bug is.
 A minimal working example demonstrating the current behavior.
 
 ```python
-from piqa import module
+from piqa import component
 ...
-y = module.component(x)  # bug happens
+y = component(x)  # bug happens
 ```
 
 ### Expected behavior
