@@ -28,7 +28,7 @@ from .utils.functional import l2_norm
 ORIGIN: str = 'https://github.com/richzhang/PerceptualSimilarity'
 SHIFT: Tensor = torch.tensor([0.485, 0.456, 0.406])
 SCALE: Tensor = torch.tensor([0.229, 0.224, 0.225])
-
+EPS: float = 1e-10
 
 def get_weights(
     network: str = 'alex',
@@ -210,8 +210,8 @@ class LPIPS(nn.Module):
         residuals = []
 
         for lin, fx, fy in zip(self.lins, self.net(input), self.net(target)):
-            fx = fx / l2_norm(fx, dims=[1], keepdim=True)
-            fy = fy / l2_norm(fy, dims=[1], keepdim=True)
+            fx = fx / (l2_norm(fx, dims=[1], keepdim=True) + EPS)
+            fy = fy / (l2_norm(fy, dims=[1], keepdim=True) + EPS)
 
             mse = ((fx - fy) ** 2).mean(dim=(-1, -2), keepdim=True)
             residuals.append(lin(mse).flatten())
