@@ -1,43 +1,26 @@
 #!/usr/bin/env python
 
 import doctest
-import os
-import sys
+import piqa
 import unittest
 
-sys.path.append(os.path.abspath('..'))
 
-from piqa import utils
-from piqa.utils import color, complex, functional
-from piqa import (
-    tv,
-    psnr,
-    ssim,
-    lpips,
-    mdsi,
-    gmsd,
-    haarpsi,
-    vsi,
-    fsim,
-)
-
-
-if __name__ == '__main__':
+def tests():
     suite = unittest.TestSuite()
     modules = [
-        utils,
-        color,
-        complex,
-        functional,
-        tv,
-        psnr,
-        ssim,
-        lpips,
-        mdsi,
-        gmsd,
-        haarpsi,
-        vsi,
-        fsim,
+        piqa.utils,
+        piqa.utils.color,
+        piqa.utils.functional,
+        piqa.tv,
+        piqa.psnr,
+        piqa.ssim,
+        piqa.lpips,
+        piqa.mdsi,
+        piqa.gmsd,
+        piqa.haarpsi,
+        piqa.vsi,
+        piqa.fsim,
+        piqa.fid,
     ]
 
     for m in modules:
@@ -45,3 +28,7 @@ if __name__ == '__main__':
 
     runner = unittest.TextTestRunner()
     runner.run(suite)
+
+
+if __name__ == '__main__':
+    tests()
