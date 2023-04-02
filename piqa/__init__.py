@@ -11,3 +11,4 @@ from .mdsi import MDSI
 from .haarpsi import HaarPSI
 from .vsi import VSI
 from .fsim import FSIM
+from .fid import FID
