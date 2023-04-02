@@ -5,6 +5,10 @@
 # macOS
 .DS_Store
 
+# Docs
+docs/api/
+docs/html/
+
 
 ##########
 # Python #

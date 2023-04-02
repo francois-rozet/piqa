@@ -1,0 +1,140 @@
+/* Miscellaneous */
+
+* {
+    overflow-wrap: break-word;
+}
+
+a {
+    text-decoration: none;
+}
+
+h2 {
+    font-size: 1.75em;
+}
+
+p.rubric {
+    font-size: var(--font-size--small);
+    font-weight: 500;
+    margin-bottom: 0;
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+}
+
+/* Admonitions */
+
+div.admonition {
+    box-shadow: 5px 5px 10px rgb(0 0 0 / 5%);
+}
+
+/* Code */
+
+div[class*=" highlight-"],
+div[class^=highlight-] {
+    margin-top: 0.5rem;
+}
+
+.highlight,
+.highlight span,
+.literal {
+    background: var(--color-background-secondary) !important;
+    border: none !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    text-decoration: none !important;
+}
+
+.highlight .go {
+    color: var(--color-api-overall) !important;
+}
+
+/* Lists */
+
+span.colon {
+    display: none;
+}
+
+dl.field-list > dd em {
+    font-style: normal;
+}
+
+/* Math */
+
+div.math-wrapper {
+    overflow-x: unset;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+}
+
+mjx-container[display="true"] {
+    margin: 0.125rem 0 !important;
+}
+
+/* Sidebar */
+
+.sidebar-drawer {
+    left: -18em;
+    min-width: 18em;
+}
+
+div.sidebar-container {
+    width: 18em;
+}
+
+img.sidebar-logo {
+    max-width: 50%;
+}
+
+div.sidebar-tree .reference.external {
+    color: var(--color-link);
+}
+
+div.sidebar-tree .reference.internal,
+div.sidebar-tree label .icon {
+    color: var(--color-sidebar-link-text) !important;
+}
+
+/* Signatures */
+
+dl.py > dt.sig > a.headerlink {
+    margin-right: 2em;
+}
+
+dl.py > dt.sig > a.reference {
+    float: right;
+    text-indent: 0;
+    width: 0;
+}
+
+dl.py > dt.sig > a.reference > span.viewcode-link {
+    width: unset;
+}
+
+/* Table */
+
+div.table-wrapper {
+    margin: 1em 0;
+    padding: 0;
+}
+
+table.autosummary {
+    border-radius: 0.25em;
+    box-shadow: none;
+    width: 100%;
+}
+
+table.autosummary tr {
+    border: none;
+}
+
+table.autosummary tr.row-odd {
+    background: var(--color-background-secondary);
+}
+
+table.autosummary tr td {
+    border: none;
+    padding: 0.5em;
+}
+
+table.autosummary tr td code {
+    background: none !important;
+}

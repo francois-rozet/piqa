@@ -1,35 +1,51 @@
 # Configuration file for the Sphinx documentation builder
 
-import os
-import sys
+import glob
 import inspect
 import importlib
-
-sys.path.insert(0, os.path.abspath('..'))
+import re
+import subprocess
+import piqa
 
 ## Project
 
+package = 'piqa'
 project = 'PIQA'
-copyright = '2020-2022, François Rozet'
+version = piqa.__version__
+copyright = '2020-2023, François Rozet'
 repository = 'https://github.com/francois-rozet/piqa'
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
 
 ## Extensions
 
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx.ext.githubpages',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
     'sphinx.ext.napoleon',
 ]
 
-add_function_parentheses = False
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+}
 autodoc_inherit_docstrings = False
 autodoc_typehints = 'description'
 autodoc_typehints_description_target = 'documented'
 autodoc_typehints_format = 'short'
-autosummary_generate = True
 
-def linkcode_resolve(domain: str, info: dict, package: str = 'piqa') -> str:
+autosummary_ignore_module_all = False
+
+intersphinx_mapping = {
+    'numpy': ('https://numpy.org/doc/stable', None),
+    'python': ('https://docs.python.org/3', None),
+    'torch': ('https://pytorch.org/docs/stable', None),
+}
+
+
+def linkcode_resolve(domain: str, info: dict) -> str:
     module = info.get('module', '')
     fullname = info.get('fullname', '')
 
@@ -42,24 +58,25 @@ def linkcode_resolve(domain: str, info: dict, package: str = 'piqa') -> str:
 
     try:
         file = inspect.getsourcefile(objct)
-        file = file[file.rindex(package):]
+        file = file[file.rindex(package) :]
 
         lines, start = inspect.getsourcelines(objct)
         end = start + len(lines) - 1
     except Exception as e:
         return None
     else:
-        return f'{repository}/tree/docs/{file}#L{start}-L{end}'
+        return f'{repository}/blob/{commit}/{file}#L{start}-L{end}'
+
 
 napoleon_custom_sections = [
     'Original',
     'Wikipedia',
-    ('Shapes', 'params_style'),
 ]
 
-## HTML
+## Settings
 
-default_role = 'python'
+add_function_parentheses = False
+default_role = 'literal'
 exclude_patterns = ['templates']
 html_copy_source = False
 html_css_files = [
@@ -75,15 +92,15 @@ html_theme_options = {
     'footer_icons': [
         {
             'name': 'GitHub',
-            'url': 'https://github.com/francois-rozet/piqa',
+            'url': repository,
             'html': '<i class="fa-brands fa-github fa-lg"></i>',
             'class': '',
         },
     ],
     'light_css_variables': {
-        'color-api-keyword': '#006699',
-        'color-api-name': '#00aa88',
-        'color-api-pre-name': '#00aa88',
+        'color-api-keyword': '#007020',
+        'color-api-name': '#0e84b5',
+        'color-api-pre-name': '#0e84b5',
     },
     'light_logo': 'logo.svg',
     'dark_css_variables': {
@@ -94,12 +111,32 @@ html_theme_options = {
     'dark_logo': 'logo_dark.svg',
     'sidebar_hide_name': True,
 }
-pygments_style = 'manni'
+html_title = f'{project} {version}'
+pygments_style = 'sphinx'
 pygments_dark_style = 'monokai'
-root_doc = 'piqa'
 rst_prolog = """
-.. role:: python(code)
+.. role:: py(code)
     :class: highlight
     :language: python
 """
 templates_path = ['templates']
+
+## Edit HTML
+
+def edit_html(app, exception):
+    if exception:
+        raise exception
+
+    for file in glob.glob(f'{app.outdir}/**/*.html', recursive=True):
+        with open(file, 'r') as f:
+            text = f.read()
+
+        text = text.replace('<a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>\'s', '')
+        text = text.replace('<span class="pre">[source]</span>', '<i class="fa-solid fa-code"></i>')
+        text = re.sub(r'(<a class="reference external".*</a>)(<a class="headerlink".*</a>)', r'\2\1', text)
+
+        with open(file, 'w') as f:
+            f.write(text)
+
+def setup(app):
+    app.connect('build-finished', edit_html)
