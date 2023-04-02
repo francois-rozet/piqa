@@ -3,7 +3,7 @@ r"""Total Variation (TV)
 This module implements the TV in PyTorch.
 
 Wikipedia:
-    https://en.wikipedia.org/wiki/Total_variation
+    https://wikipedia.org/wiki/Total_variation
 """
 
 import torch
@@ -11,10 +11,11 @@ import torch.nn as nn
 
 from torch import Tensor
 
-from .utils import _jit, assert_type, reduce_tensor
+from .utils import assert_type
+from .utils.functional import reduce_tensor
 
 
-@_jit
+@torch.jit.script_if_tracing
 def tv(x: Tensor, norm: str = 'L1') -> Tensor:
     r"""Returns the TV of :math:`x`.
 
@@ -35,7 +36,7 @@ def tv(x: Tensor, norm: str = 'L1') -> Tensor:
     Args:
         x: An input tensor, :math:`(*, C, H, W)`.
         norm: Specifies the norm funcion to apply:
-            `'L1'` | `'L2'` | `'L2_squared'`.
+            `'L1'`, `'L2'` or `'L2_squared'`.
 
     Returns:
         The TV tensor, :math:`(*,)`.
@@ -43,7 +44,7 @@ def tv(x: Tensor, norm: str = 'L1') -> Tensor:
     Example:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> l = tv(x)
-        >>> l.size()
+        >>> l.shape
         torch.Size([5])
     """
 
@@ -66,24 +67,18 @@ def tv(x: Tensor, norm: str = 'L1') -> Tensor:
 
 
 class TV(nn.Module):
-    r"""Creates a criterion that measures the TV of an input.
+    r"""Measures the TV of an input.
 
     Args:
         reduction: Specifies the reduction to apply to the output:
-            `'none'` | `'mean'` | `'sum'`.
-
-    Note:
-        `**kwargs` are passed to :func:`tv`.
-
-    Shapes:
-        input: :math:`(*, C, H, W)`
-        output: :math:`(*,)` or :math:`()` depending on `reduction`
+            `'none'`, `'mean'` or `'sum'`.
+        kwargs: Keyword arguments passed to :func:`tv`.
 
     Example:
         >>> criterion = TV()
-        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True)
         >>> l = criterion(x)
-        >>> l.size()
+        >>> l.shape
         torch.Size([])
         >>> l.backward()
     """
@@ -94,9 +89,17 @@ class TV(nn.Module):
         self.reduction = reduction
         self.kwargs = kwargs
 
-    def forward(self, input: Tensor) -> Tensor:
-        assert_type(input, dim_range=(3, -1))
+    def forward(self, x: Tensor) -> Tensor:
+        r"""
+        Args:
+            x: An input tensor, :math:`(N, C, H, W)`.
 
-        l = tv(input, **self.kwargs)
+        Returns:
+            The TV vector, :math:`(N,)` or :math:`()` depending on `reduction`.
+        """
+
+        assert_type(x, dim_range=(4, 4))
+
+        l = tv(x, **self.kwargs)
 
         return reduce_tensor(l, self.reduction)

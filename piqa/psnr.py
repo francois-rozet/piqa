@@ -3,7 +3,7 @@ r"""Peak Signal-to-Noise Ratio (PSNR)
 This module implements the PSNR in PyTorch.
 
 Wikipedia:
-    https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
+    https://wikipedia.org/wiki/Peak_signal-to-noise_ratio
 """
 
 import torch
@@ -11,10 +11,11 @@ import torch.nn as nn
 
 from torch import Tensor
 
-from .utils import _jit, assert_type, reduce_tensor
+from .utils import assert_type
+from .utils.functional import reduce_tensor
 
 
-@_jit
+@torch.jit.script_if_tracing
 def mse(x: Tensor, y: Tensor) -> Tensor:
     r"""Returns the Mean Squared Error (MSE) between :math:`x` and :math:`y`.
 
@@ -32,19 +33,19 @@ def mse(x: Tensor, y: Tensor) -> Tensor:
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
         >>> l = mse(x, y)
-        >>> l.size()
+        >>> l.shape
         torch.Size([5])
     """
 
-    return ((x - y) ** 2).reshape(x.size(0), -1).mean(dim=-1)
+    return (x - y).square().reshape(x.shape[0], -1).mean(dim=-1)
 
 
-@_jit
+@torch.jit.script_if_tracing
 def psnr(
     x: Tensor,
     y: Tensor,
     epsilon: float = 1e-8,
-    value_range: float = 1.,
+    value_range: float = 1.0,
 ) -> Tensor:
     r"""Returns the PSNR between :math:`x` and :math:`y`.
 
@@ -55,7 +56,7 @@ def psnr(
         x: An input tensor, :math:`(N, *)`.
         y: A target tensor, :math:`(N, *)`.
         epsilon: A numerical stability term.
-        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
+        value_range: The value range :math:`L` of the inputs (usually 1 or 255).
 
     Returns:
         The PSNR vector, :math:`(N,)`.
@@ -64,7 +65,7 @@ def psnr(
         >>> x = torch.rand(5, 3, 256, 256)
         >>> y = torch.rand(5, 3, 256, 256)
         >>> l = psnr(x, y)
-        >>> l.size()
+        >>> l.shape
         torch.Size([5])
     """
 
@@ -72,27 +73,19 @@ def psnr(
 
 
 class PSNR(nn.Module):
-    r"""Creates a criterion that measures the PSNR
-    between an input and a target.
+    r"""Measures the PSNR between an input and a target.
 
     Args:
         reduction: Specifies the reduction to apply to the output:
-            `'none'` | `'mean'` | `'sum'`.
-
-    Note:
-        `**kwargs` are passed to :func:`psnr`.
-
-    Shapes:
-        input: :math:`(N, *)`
-        target: :math:`(N, *)`
-        output: :math:`(N,)` or :math:`()` depending on `reduction`
+            `'none'`, `'mean'` or `'sum'`.
+        kwargs: Keyword arguments passed to :func:`psnr`.
 
     Example:
         >>> criterion = PSNR()
-        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True).cuda()
-        >>> y = torch.rand(5, 3, 256, 256).cuda()
+        >>> x = torch.rand(5, 3, 256, 256, requires_grad=True)
+        >>> y = torch.rand(5, 3, 256, 256)
         >>> l = -criterion(x, y)
-        >>> l.size()
+        >>> l.shape
         torch.Size([])
         >>> l.backward()
     """
@@ -101,16 +94,25 @@ class PSNR(nn.Module):
         super().__init__()
 
         self.reduction = reduction
-        self.value_range = kwargs.get('value_range', 1.)
+        self.value_range = kwargs.get('value_range', 1.0)
         self.kwargs = kwargs
 
-    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
+        r"""
+        Args:
+            x: An input tensor, :math:`(N, *)`.
+            y: A target tensor, :math:`(N, *)`.
+
+        Returns:
+            The PSNR vector, :math:`(N,)` or :math:`()` depending on `reduction`.
+        """
+
         assert_type(
-            input, target,
+            x, y,
             dim_range=(1, -1),
-            value_range=(0., self.value_range),
+            value_range=(0.0, self.value_range),
         )
 
-        l = psnr(input, target, **self.kwargs)
+        l = psnr(x, y, **self.kwargs)
 
         return reduce_tensor(l, self.reduction)

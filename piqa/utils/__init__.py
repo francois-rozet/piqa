@@ -1,23 +1,16 @@
 r"""Miscellaneous tools and general purpose components"""
 
-import os
 import torch
 
-from torch import Tensor
-from typing import List, Tuple
-
-
-if os.getenv('PIQA_JIT') == '1':
-    _jit = torch.jit.script
-else:
-    _jit = lambda f: f
+from torch import Tensor, Size
+from typing import *
 
 
 __piqa_debug__ = __debug__
 
 def set_debug(mode: bool = False) -> bool:
     r"""Sets and returns whether debugging is enabled or not.
-    If `__debug__` is `False`, this function has not effect.
+    If `__debug__` is :py:`False`, this function has not effect.
 
     Example:
         >>> set_debug(False)
@@ -31,7 +24,7 @@ def set_debug(mode: bool = False) -> bool:
     return __piqa_debug__
 
 
-def broadcastable(*shapes) -> bool:
+def broadcastable(*shapes: Size) -> bool:
     r"""Returns whether `shapes` are broadcastable.
 
     Example:
@@ -53,7 +46,7 @@ def broadcastable(*shapes) -> bool:
 
 
 def assert_type(
-    *tensors,
+    *tensors: Tensor,
     device: torch.device = None,
     dim_range: Tuple[int, int] = None,
     n_channels: int = None,
@@ -68,13 +61,14 @@ def assert_type(
         >>> assert_type(x, y, dim_range=(4, 4), n_channels=3)
     """
 
-    if not __piqa_debug__:
+    if torch.jit.is_tracing() or not __piqa_debug__:
         return
 
     if device is None:
         device = tensors[0].device
 
     shapes = [tuple(t.shape) for t in tensors]
+
     assert broadcastable(*shapes), f"Expected all tensors to have broadcastable shapes, but got {shapes}."
 
     for t in tensors:
@@ -83,7 +77,7 @@ def assert_type(
         if dim_range is None:
             pass
         elif dim_range[0] == dim_range[1]:
-            assert t.dim() == dim_range[0], f"Expected number of dimensions to be ' {dim_range[0]}, but got {t.dim()}."
+            assert t.dim() == dim_range[0], f"Expected number of dimensions to be {dim_range[0]}, but got {t.dim()}."
         elif dim_range[0] < dim_range[1]:
             assert dim_range[0] <= t.dim(), f"Expected number of dimensions to be greater or equal to {dim_range[0]}, but got {t.dim()}."
             assert t.dim() <= dim_range[1], f"Expected number of dimensions to be lower or equal to {dim_range[1]}, but got {t.dim()}."
@@ -91,31 +85,8 @@ def assert_type(
             assert dim_range[0] <= t.dim(), f"Expected number of dimensions to be greater or equal to {dim_range[0]}, but got {t.dim()}."
 
         if n_channels is not None:
-            assert t.size(1) == n_channels, f"Expected number of channels to be {n_channels}, but got {t.size(1)}."
+            assert t.shape[1] == n_channels, f"Expected number of channels to be {n_channels}, but got {t.shape[1]}."
 
         if value_range is not None:
             assert value_range[0] <= t.min(), f"Expected all values to be greater or equal to {value_range[0]}, but got {t.min().item()}."
             assert t.max() <= value_range[1], f"Expected all values to be lower or equal to {value_range[1]}, but got {t.max().item()}."
-
-
-@_jit
-def reduce_tensor(x: Tensor, reduction: str = 'mean') -> Tensor:
-    r"""Returns the reduction of :math:`x`.
-
-    Args:
-        x: A tensor, :math:`(*,)`.
-        reduction: Specifies the reduction type:
-            `'none'` | `'mean'` | `'sum'`.
-
-    Example:
-        >>> x = torch.arange(5)
-        >>> reduce_tensor(x, reduction='sum')
-        tensor(10)
-    """
-
-    if reduction == 'mean':
-        return x.mean()
-    elif reduction == 'sum':
-        return x.sum()
-
-    return x

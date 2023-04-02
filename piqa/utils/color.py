@@ -5,33 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch import Tensor
-from typing import Optional, Tuple
-
-
-def spatial(x: Tensor) -> int:
-    r"""Returns the number of spatial dimensions of :math:`x`.
-
-    Args:
-        x: A tensor, :math:`(N, C, *)`.
-    """
-
-    return len(x.shape) - 2
-
-
-def color_conv(
-    x: Tensor,
-    weight: Tensor,
-    bias: Optional[Tensor] = None,
-) -> Tensor:
-    r"""Returns the color convolution of :math:`x` with the kernel `weight`.
-
-    Args:
-        x: A tensor, :math:`(N, C, *)`.
-        weight: A weight kernel, :math:`(C', C)`.
-        bias: A bias vector, :math:`(C',)`.
-    """
-
-    return F.linear(x.transpose(1, -1), weight, bias).transpose(1, -1)
+from typing import *
 
 
 RGB_TO_YIQ = torch.tensor([
@@ -62,6 +36,22 @@ _WEIGHTS = {
 }
 
 
+def color_conv(
+    x: Tensor,
+    weight: Tensor,
+    bias: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Returns the color convolution of :math:`x` with the kernel `weight`.
+
+    Args:
+        x: A tensor, :math:`(N, C, *)`.
+        weight: A weight kernel, :math:`(C', C)`.
+        bias: A bias vector, :math:`(C',)`.
+    """
+
+    return F.linear(x.movedim(1, -1), weight, bias).movedim(-1, 1)
+
+
 class ColorConv(nn.Module):
     r"""Color convolution module.
 
@@ -73,7 +63,7 @@ class ColorConv(nn.Module):
         >>> x = torch.rand(5, 3, 256, 256)
         >>> conv = ColorConv('RGB', 'YIQ')
         >>> y = conv(x)
-        >>> y.size()
+        >>> y.shape
         torch.Size([5, 3, 256, 256])
     """
 
@@ -84,22 +74,18 @@ class ColorConv(nn.Module):
 
         self.register_buffer('weight', _WEIGHTS[(src, dst)])
 
-    @property
-    def device(self) -> torch.device:
-        return self.weight.device
-
     def forward(self, x: Tensor) -> Tensor:
         return color_conv(x, self.weight)
 
 
-def rgb_to_xyz(x: Tensor, value_range: float = 1.) -> Tensor:
+def rgb_to_xyz(x: Tensor, value_range: float = 1.0) -> Tensor:
     r"""Converts from sRGB to (CIE) XYZ.
 
-    Args:
-        value_range: The value range :math:`L` of the inputs (usually `1.` or `255`).
-
     Wikipedia:
-        https://en.wikipedia.org/wiki/SRGB
+        https://wikipedia.org/wiki/SRGB
+
+    Args:
+        value_range: The value range :math:`L` of the inputs (usually 1 or 255).
     """
 
     x = x / value_range
@@ -122,13 +108,13 @@ def xyz_to_lab(x: Tensor) -> Tensor:
     r"""Converts from (CIE) XYZ to (CIE) LAB.
 
     Wikipedia:
-        https://en.wikipedia.org/wiki/CIELAB_color_space
+        https://wikipedia.org/wiki/CIELAB_color_space
     """
 
-    illuminants = torch.tensor([0.964212, 1., 0.825188])  # D50
+    illuminants = torch.tensor([0.964212, 1.0, 0.825188])  # D50
     delta = 6 / 29
 
-    x = color_conv(x, torch.diag(illuminants).to(x))
+    x = color_conv(x, torch.diag(illuminants.to(x)))
     x = torch.where(
         x > delta ** 3,
         x ** (1 / 3),
@@ -136,11 +122,39 @@ def xyz_to_lab(x: Tensor) -> Tensor:
     )
 
     weight = torch.tensor([
-        [0., 116., 0.],
-        [500., -500., 0.],
-        [0., 200., -200.],
+        [0.0, 116.0, 0.0],
+        [500.0, -500.0, 0.0],
+        [0.0, 200.0, -200.0],
     ])
 
-    bias = torch.tensor([-16., 0., 0.])
+    bias = torch.tensor([-16.0, 0.0, 0.0])
 
     return color_conv(x, weight.to(x), bias.to(x))
+
+
+class ImageNetNorm(nn.Module):
+    r"""Normalizes channels with respect to ImageNet's mean and standard deviation.
+
+    References:
+        | ImageNet: A large-scale hierarchical image database (Deng et al, 2009)
+        | https://ieeexplore.ieee.org/document/5206848
+
+    Example:
+        >>> x = torch.rand(5, 3, 256, 256)
+        >>> normalize = ImageNetNorm()
+        >>> x = normalize(x)
+        >>> x.shape
+        torch.Size([5, 3, 256, 256])
+    """
+
+    MEAN: Tensor = torch.tensor([0.485, 0.456, 0.406])
+    STD: Tensor = torch.tensor([0.229, 0.224, 0.225])
+
+    def __init__(self):
+        super().__init__()
+
+        self.register_buffer('shift', self.MEAN.reshape(3, 1, 1))
+        self.register_buffer('scale', self.STD.reshape(3, 1, 1))
+
+    def forward(self, x: Tensor) -> Tensor:
+        return (x - self.shift) / self.scale
