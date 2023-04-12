@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+type: software
+title: "PIQA: PyTorch Image Quality Assessement"
+authors:
+  - given-names: François
+    family-names: Rozet
+    email: francois.rozet@outlook.com
+    affiliation: University of Liège
+    orcid: https://orcid.org/0000-0002-8846-8761
+url: https://pypi.org/project/piqa
+doi: 10.5281/zenodo.7821598
+date-released: 2020-12-05
+license: MIT
