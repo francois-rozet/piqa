@@ -1,6 +1,6 @@
 r"""PyTorch Image Quality Assessement (PIQA)"""
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 from .tv import TV
 from .psnr import PSNR
