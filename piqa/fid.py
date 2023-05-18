@@ -25,6 +25,31 @@ from .utils.color import ImageNetNorm
 
 
 @torch.jit.script_if_tracing
+def sqrtm(sigma: Tensor) -> Tensor:
+    r"""Returns the square root of a positive semi-definite matrix.
+
+    .. math:: \sqrt{\Sigma} = Q \sqrt{\Lambda} Q^T
+
+    where :math:`Q \Lambda Q^T` is the eigendecomposition of :math:`\Sigma`.
+
+    Args:
+        sigma: A positive semi-definite matrix, :math:`(*, D, D)`.
+
+    Example:
+        >>> V = torch.randn(4, 4, dtype=torch.double)
+        >>> A = V @ V.T
+        >>> B = sqrtm(A @ A)
+        >>> torch.allclose(A, B)
+        True
+    """
+
+    L, Q = torch.linalg.eigh(sigma)
+    L = L.relu().sqrt()
+
+    return Q @ (L[..., None] * Q.mT)
+
+
+@torch.jit.script_if_tracing
 def frechet_distance(
     mu_x: Tensor,
     sigma_x: Tensor,
@@ -34,7 +59,7 @@ def frechet_distance(
     r"""Returns the Fréchet distance between two multivariate Gaussian distributions.
 
     .. math:: d^2 = \left\| \mu_x - \mu_y \right\|_2^2 +
-        \operatorname{tr} \left( \Sigma_x + \Sigma_y - 2 \sqrt{\Sigma_x \Sigma_y} \right)
+        \operatorname{tr} \left( \Sigma_x + \Sigma_y - 2 \sqrt{\Sigma_y^{\frac{1}{2}} \Sigma_x \Sigma_y^{\frac{1}{2}}} \right)
 
     Wikipedia:
         https://wikipedia.org/wiki/Frechet_distance
@@ -54,9 +79,11 @@ def frechet_distance(
         tensor(15.8710)
     """
 
+    sigma_y_12 = sqrtm(sigma_y)
+
     a = (mu_x - mu_y).square().sum(dim=-1)
     b = sigma_x.trace() + sigma_y.trace()
-    c = torch.linalg.eigvals(sigma_x @ sigma_y).sqrt().real.sum(dim=-1)
+    c = sqrtm(sigma_y_12 @ sigma_x @ sigma_y_12).trace()
 
     return a + b - 2 * c
 
