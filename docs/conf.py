@@ -56,6 +56,9 @@ def linkcode_resolve(domain: str, info: dict) -> str:
     for name in fullname.split('.'):
         objct = getattr(objct, name)
 
+    if hasattr(objct, '__wrapped__'):
+        objct = objct.__wrapped__
+
     try:
         file = inspect.getsourcefile(objct)
         file = file[file.rindex(package) :]
