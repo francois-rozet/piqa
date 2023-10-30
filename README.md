@@ -50,9 +50,8 @@ Like `torch.nn` built-in components, these classes are based on functional defin
 from piqa.ssim import ssim
 from piqa.utils.functional import gaussian_kernel
 
-kernel = gaussian_kernel(11, sigma=1.5).expand(3, 11, 11)
-
-l = 1 - ssim(x, y, kernel=kernel)
+kernel = gaussian_kernel(11, sigma=1.5).repeat(3, 1, 1)
+ss, cs = ssim(x, y, kernel=kernel)
 ```
 
 For more information, check out the documentation at [piqa.readthedocs.io](https://piqa.readthedocs.io).
